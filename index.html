@@ -1,44 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lekompo Music</title>
 <style>
-body{margin:0;background:#0f0f0f;color:white;font-family:sans-serif;text-align:center}
-header{padding:30px;background:linear-gradient(45deg,#ff0080,#ff8c00)}
-h1{font-size:40px;margin:0}
-.card{background:#1e1e1e;margin:15px;padding:20px;border-radius:15px}
-a{color:#ff8c00;text-decoration:none;font-weight:bold}
-audio{width:100%;margin-top:10px}
-.btn{background:#ff0080;color:white;padding:12px 25px;border-radius:30px;display:inline-block;margin-top:10px}
+body{margin:0;background:#0a0a0a;color:#fff;font-family:Arial}
+header{padding:20px;text-align:center;background:linear-gradient(90deg,#ff006a,#ffcc00);color:#000;font-weight:900;font-size:28px}
+.container{max-width:900px;margin:auto;padding:15px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:15px}
+.mix{background:#1a1a1a;border-radius:16px;overflow:hidden}
+.mix img{width:100%;height:250px;object-fit:cover;background:#222}
+.info{padding:12px}
+.info h3{margin:5px 0}
+.info p{color:#aaa;font-size:13px;margin:5px 0}
+.btn{display:block;text-align:center;background:#1DB954;color:#fff;padding:12px;border-radius:10px;text-decoration:none;font-weight:bold;margin-top:10px}
+#empty{text-align:center;color:#666;padding:50px;grid-column:1/-1}
 </style>
 </head>
 <body>
-<header>
-<h1>LEKOMPO</h1>
-<p>Hottest Lekompo Mixtapes 2025/2026</p>
-</header>
-
-<div class="card">
-<h2>🔥 Mixtape Vol.1</h2>
-<p>Best of Lekompo Hits</p>
-<audio controls><source src="" type="audio/mpeg"></audio>
-<a class="btn" href="#">Download</a>
-</div>
-
-<div class="card">
-<h2>🔥 Mixtape Vol.2</h2>
-<p>Lekompo Street Anthems</p>
-<audio controls><source src="" type="audio/mpeg"></audio>
-<a class="btn" href="#">Download</a>
-</div>
-
-<div class="card">
-<h2>Upload Your Mix</h2>
-<p>Want your mixtape here? Contact us!</p>
-<p>WhatsApp: 0XX XXX XXXX</p>
-</div>
-
-<footer style="padding:20px;color:gray">© 2026 Lekompo Music</footer>
+<header>LEKOMPO MUSIC</header>
+<div class="container" id="list"><div id="empty">Loading mixes...</div></div>
+<script>
+async function load(){
+ try{
+  let res=await fetch('mixes.json?v='+Date.now());
+  let mixes=await res.json();
+  let list=document.getElementById('list');
+  if(!mixes.length){list.innerHTML='<div id="empty">No mixes yet. Go to /admin.html to add first mix!</div>';return}
+  list.innerHTML=mixes.map(m=>`
+   <div class="mix">
+    <img src="${m.cover||'https://via.placeholder.com/400x400?text=LEKOMPO'}" onerror="this.src='https://via.placeholder.com/400x400?text=LEKOMPO'">
+    <div class="info">
+     <h3>${m.title}</h3>
+     <p>${m.artist||''} ${m.desc||''}</p>
+     <a class="btn" href="${m.link}" target="_blank">▶ Play / Download</a>
+    </div>
+   </div>`).join('');
+ }catch(e){document.getElementById('list').innerHTML='<div id="empty">Error loading mixes</div>'}
+}
+load();
+</script>
 </body>
 </html>
