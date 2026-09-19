@@ -1,45 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin</title>
 <style>
-body{font-family:Arial;background:#111;color:white;padding:20px}
-input,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none}
+body{font-family:Arial;background:#0f0f0f;color:white;padding:20px}
+input,button{width:100%;padding:14px;margin:8px 0;border-radius:10px;border:none;box-sizing:border-box}
 input{background:#222;color:white}
-button{background:#ff0055;color:white;font-weight:bold;cursor:pointer}
-.mix{background:#1a1a1a;padding:12px;margin:10px 0;border-radius:10px;display:flex;gap:12px;align-items:center}
-.mix img{width:70px;height:70px;border-radius:8px;object-fit:cover}
-.winner{border:2px solid gold;background:#2a2410}
+button{background:#ff0055;color:white;font-weight:bold;font-size:16px}
+.card{background:#1a1a1a;padding:12px;margin:10px 0;border-radius:10px;display:flex;gap:12px;align-items:center}
+.card img{width:70px;height:70px;border-radius:8px;object-fit:cover}
+.winner{border:2px solid gold}
 </style>
 </head>
 <body>
-<div id="login">
+<div id="loginBox">
 <h2>Admin</h2>
-<input id="pass" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
+<input id="pass" type="password" placeholder="Enter password">
+<button id="loginBtn">Login</button>
+<p id="msg" style="color:#ff6666"></p>
 </div>
+
 <div id="panel" style="display:none">
-<h2>➕ Upload</h2>
-<input id="title" placeholder="Title only">
-<input id="cover" placeholder="Artwork link only">
-<input id="token" type="password" placeholder="GitHub Token">
-<button onclick="publish()">Upload</button>
-<h2 style="margin-top:30px">🏆 Winner</h2>
-<div id="board"></div>
+<h2>➕ Upload (Title + Artwork only)</h2>
+<input id="title" placeholder="Title">
+<input id="cover" placeholder="Artwork link (https://...)">
+<input id="token" type="password" placeholder="GitHub Token (ghp_...)">
+<button id="upBtn">Upload</button>
+
+<h2 style="margin-top:30px">🏆 Winner Board</h2>
+<div id="board">Loading...</div>
+<button onclick="location.reload()" style="background:#333;margin-top:20px">Logout</button>
 </div>
+
 <script>
 const ADMIN_PASS="lekompo123";
-const API_BASE="https://countapi.mileshilliard.com/api/v1";
-const NAMESPACE="lekompo-starjoydegzza-2026";
-function login(){
- if(document.getElementById('pass').value===ADMIN_PASS){
-  document.getElementById('login').style.display='none';
-  document.getElementById('panel').style.display='block';
-  loadBoard();
- }else alert('Wrong');
-}
-async function loadBoard(){
- const res=await fetch('mixes.json?t='+Date.now());
- const mixes=await res.json
+const API="https://countapi.mileshilliard.com/api/v1";
+const NS="lekompo-starjoydegzza-2026";
+
+document.getElementById('loginBtn').addEventListener('click', function(){
+ const p=document.getElementById('pass').value.trim();
+ if(p===ADMIN_PASS){
+  document.getElementById('loginBox').style.display='
