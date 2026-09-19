@@ -3,60 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lekompo Music</title>
+<title>Lekompo Vote</title>
 <style>
 body{font-family:Arial;background:#0f0f0f;color:white;margin:0;padding:20px}
 h1{text-align:center;color:#ff0055}
 .mix{background:#1a1a1a;border-radius:15px;padding:15px;margin:15px 0;display:flex;gap:15px;align-items:center}
-.mix img{width:90px;height:90px;border-radius:10px;object-fit:cover}
-.info{flex:1}
+.mix img{width:100px;height:100px;border-radius:10px;object-fit:cover}
 .title{font-weight:bold;font-size:18px}
-.btns{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
-.btn{padding:8px 14px;border:none;border-radius:20px;cursor:pointer;font-weight:bold}
-.play{background:#ff0055;color:white}
-.download{background:#333;color:white}
-.vote{background:#00ff88;color:black}
-.vote.voted{background:#555;color:#aaa;cursor:not-allowed}
+.vote{margin-top:10px;padding:10px 20px;border:none;border-radius:20px;background:#00ff88;color:black;font-weight:bold;cursor:pointer}
+.vote.voted{background:#555;color:#aaa}
 </style>
 </head>
 <body>
-<h1>🎧 Lekompo Mixes</h1>
-<div id="mixes">Loading mixes...</div>
+<h1>🎧 Vote Your Favourite</h1>
+<div id="mixes"></div>
 <script>
-const API_BASE = "https://countapi.mileshilliard.com/api/v1";
-const NAMESPACE = "lekompo-starjoydegzza-2026";
+const API_BASE="https://countapi.mileshilliard.com/api/v1";
+const NAMESPACE="lekompo-starjoydegzza-2026";
 async function loadMixes(){
-  const res = await fetch('mixes.json?t='+Date.now());
-  const mixes = await res.json();
-  const container = document.getElementById('mixes');
-  container.innerHTML = '';
-  mixes.slice().reverse().forEach(mix=>{
-    const id = mix.id || mix.title.replace(/\s+/g,'-').toLowerCase();
-    const hasVoted = localStorage.getItem('voted-'+id);
-    const div = document.createElement('div');
-    div.className='mix';
-    div.innerHTML = `
-      <img src="${mix.cover}" onerror="this.src='https://via.placeholder.com/90'">
-      <div class="info">
-        <div class="title">${mix.title}</div>
-        <div class="btns">
-          <a href="${mix.link}" target="_blank"><button class="btn play">▶️ Play</button></a>
-          <a href="${mix.link}" download><button class="btn download">⬇️ Download</button></a>
-          <button class="btn vote ${hasVoted?'voted':''}" onclick="vote('${id}', this)" ${hasVoted?'disabled':''}>${hasVoted?'✅ Voted':'👍 Vote'}</button>
-        </div>
-      </div>
-    `;
-    container.appendChild(div);
-  });
+ const res=await fetch('mixes.json?t='+Date.now());
+ const mixes=await res.json();
+ const c=document.getElementById('mixes');
+ c.innerHTML='';
+ mixes.slice().reverse().forEach(m=>{
+  const id=m.id||m.title.replace(/\s+/g,'-').toLowerCase();
+  const voted=localStorage.getItem('voted-'+id);
+  c.innerHTML+=`<div class="mix"><img src="${m.cover}"><div><div class="title">${m.title}</div><button class="vote ${voted?'voted':''}" onclick="vote('${id}',this)" ${voted?'disabled':''}>${voted?'✅ Voted':'👍 Vote'}</button></div></div>`;
+ });
 }
-async function vote(id, btn){
-  if(localStorage.getItem('voted-'+id)) return;
-  btn.textContent='Voting...';
-  await fetch(`${API_BASE}/hit/${NAMESPACE}_${id}`);
-  localStorage.setItem('voted-'+id,'1');
-  btn.textContent='✅ Voted';
-  btn.classList.add('voted');
-  btn.disabled=true;
+async function vote(id,btn){
+ if(localStorage.getItem('voted-'+id))return;
+ btn.textContent='Voting...';
+ await fetch(`${API_BASE}/hit/${NAMESPACE}_${id}`);
+ localStorage.setItem('voted-'+id,'1');
+ btn.textContent='✅ Voted'; btn.disabled=true; btn.classList.add('voted');
 }
 loadMixes();
 </script>
