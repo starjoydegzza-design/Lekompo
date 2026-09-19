@@ -1,62 +1,64 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lekompo Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lekompo Music</title>
 <style>
-body{font-family:Arial;background:#111;color:#fff;padding:20px;max-width:600px;margin:auto}
-input,textarea{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none}
-button{width:100%;padding:15px;background:#1DB954;color:#fff;border:none;border-radius:10px;font-weight:bold;font-size:16px;margin-top:10px}
-.card{background:#222;padding:15px;border-radius:12px;margin-top:20px}
-small{color:#aaa}
+body{font-family:Arial;background:#0f0f0f;color:white;margin:0;padding:20px}
+h1{text-align:center;color:#ff0055}
+.mix{background:#1a1a1a;border-radius:15px;padding:15px;margin:15px 0;display:flex;gap:15px;align-items:center}
+.mix img{width:90px;height:90px;border-radius:10px;object-fit:cover}
+.info{flex:1}
+.title{font-weight:bold;font-size:18px}
+.btns{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 14px;border:none;border-radius:20px;cursor:pointer;font-weight:bold}
+.play{background:#ff0055;color:white}
+.download{background:#333;color:white}
+.vote{background:#00ff88;color:black}
+.vote.voted{background:#555;color:#aaa;cursor:not-allowed}
 </style>
 </head>
 <body>
-<h2>🔐 Lekompo Admin</h2>
-<div class="card">
-<small>GitHub Token (saved only on your phone)</small>
-<input type="password" id="token" placeholder="Paste your new token here">
-<button onclick="saveToken()">Save Token</button>
-<p id="tokenStatus"></p>
-</div>
-
-<div class="card">
-<h3>Add New Mix</h3>
-<input id="title" placeholder="Mix Title e.g. Lekompo 2025 Vol 1">
-<input id="artist" placeholder="Artist / DJ">
-<input id="link" placeholder="Google Drive Link">
-<input id="cover" placeholder="Cover Image Link (optional)">
-<textarea id="desc" placeholder="Description"></textarea>
-<button onclick="addMix()">🚀 Publish Mix</button>
-<p id="status"></p>
-</div>
-
+<h1>🎧 Lekompo Mixes</h1>
+<div id="mixes">Loading mixes...</div>
 <script>
-const owner='starjoydegzza-design';
-const repo='Lekompo';
-const filePath='mixes.json';
-
-function saveToken(){
- localStorage.setItem('gh_token', document.getElementById('token').value.trim());
- document.getElementById('tokenStatus').innerText='✅ Token saved!';
+const API_BASE = "https://countapi.mileshilliard.com/api/v1";
+const NAMESPACE = "lekompo-starjoydegzza-2026";
+async function loadMixes(){
+  const res = await fetch('mixes.json?t='+Date.now());
+  const mixes = await res.json();
+  const container = document.getElementById('mixes');
+  container.innerHTML = '';
+  mixes.slice().reverse().forEach(mix=>{
+    const id = mix.id || mix.title.replace(/\s+/g,'-').toLowerCase();
+    const hasVoted = localStorage.getItem('voted-'+id);
+    const div = document.createElement('div');
+    div.className='mix';
+    div.innerHTML = `
+      <img src="${mix.cover}" onerror="this.src='https://via.placeholder.com/90'">
+      <div class="info">
+        <div class="title">${mix.title}</div>
+        <div class="btns">
+          <a href="${mix.link}" target="_blank"><button class="btn play">▶️ Play</button></a>
+          <a href="${mix.link}" download><button class="btn download">⬇️ Download</button></a>
+          <button class="btn vote ${hasVoted?'voted':''}" onclick="vote('${id}', this)" ${hasVoted?'disabled':''}>${hasVoted?'✅ Voted':'👍 Vote'}</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
 }
-document.getElementById('token').value=localStorage.getItem('gh_token')||'';
-
-async function addMix(){
- const token=localStorage.getItem('gh_token');
- if(!token) return alert('Save token first!');
- const title=document.getElementById('title').value;
- const artist=document.getElementById('artist').value;
- const link=document.getElementById('link').value;
- const cover=document.getElementById('cover').value;
- const desc=document.getElementById('desc').value;
- if(!title||!link) return alert('Title and Drive Link required');
- document.getElementById('status').innerText='⏳ Publishing...';
-
- // get existing file
- let sha=null;
- let mixes=[];
- try{
-  let res=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,{headers:{Authorization:`token ${token}`}});
-  if(res.ok){let data=await res.json(); sha=data
+async function vote(id, btn){
+  if(localStorage.getItem('voted-'+id)) return;
+  btn.textContent='Voting...';
+  await fetch(`${API_BASE}/hit/${NAMESPACE}_${id}`);
+  localStorage.setItem('voted-'+id,'1');
+  btn.textContent='✅ Voted';
+  btn.classList.add('voted');
+  btn.disabled=true;
+}
+loadMixes();
+</script>
+</body>
+</html>
