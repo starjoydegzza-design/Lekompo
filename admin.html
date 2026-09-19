@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Lekompo</title>
+<title>Admin</title>
 <style>
 body{font-family:Arial;background:#111;color:white;padding:20px}
 input,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none}
@@ -12,25 +12,22 @@ button{background:#ff0055;color:white;font-weight:bold;cursor:pointer}
 .mix{background:#1a1a1a;padding:12px;margin:10px 0;border-radius:10px;display:flex;gap:12px;align-items:center}
 .mix img{width:70px;height:70px;border-radius:8px;object-fit:cover}
 .winner{border:2px solid gold;background:#2a2410}
-.badge{background:gold;color:black;padding:3px 8px;border-radius:10px;font-size:12px;font-weight:bold}
 </style>
 </head>
 <body>
 <div id="login">
-<h2>Admin Login</h2>
+<h2>Admin</h2>
 <input id="pass" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 <div id="panel" style="display:none">
-<h2>➕ Upload New Mix</h2>
-<input id="title" placeholder="Mix Title">
-<input id="link" placeholder="Google Drive Link">
-<input id="cover" placeholder="Artwork Link (imgbb.com)">
-<input id="token" type="password" placeholder="GitHub Token (for auto publish)">
-<button onclick="publish()">Publish</button>
-
-<h2 style="margin-top:30px">🏆 Leaderboard - Only You See</h2>
-<div id="board">Loading...</div>
+<h2>➕ Upload</h2>
+<input id="title" placeholder="Title only">
+<input id="cover" placeholder="Artwork link only">
+<input id="token" type="password" placeholder="GitHub Token">
+<button onclick="publish()">Upload</button>
+<h2 style="margin-top:30px">🏆 Winner</h2>
+<div id="board"></div>
 </div>
 <script>
 const ADMIN_PASS="lekompo123";
@@ -45,45 +42,4 @@ function login(){
 }
 async function loadBoard(){
  const res=await fetch('mixes.json?t='+Date.now());
- const mixes=await res.json();
- let results=[];
- for(let m of mixes){
-  const id=m.id||m.title.replace(/\s+/g,'-').toLowerCase();
-  try{
-   const r=await fetch(`${API_BASE}/get/${NAMESPACE}_${id}`);
-   const d=await r.json();
-   results.push({...m,id,votes:d.value||0});
-  }catch{results.push({...m,id,votes:0});}
- }
- results.sort((a,b)=>b.votes-a.votes);
- const board=document.getElementById('board');
- board.innerHTML='';
- results.forEach((m,i)=>{
-  const div=document.createElement('div');
-  div.className='mix'+(i===0&&m.votes>0?' winner':'');
-  div.innerHTML=`<img src="${m.cover}"><div style="flex:1"><div>${i===0&&m.votes>0?'<span class=badge>WINNER 👑</span> ':''}<b>${m.title}</b></div><div>Votes: ${m.votes}</div></div>`;
-  board.appendChild(div);
- });
-}
-async function publish(){
- const title=document.getElementById('title').value;
- const link=document.getElementById('link').value;
- const cover=document.getElementById('cover').value;
- const token=document.getElementById('token').value;
- if(!title||!link||!cover) return alert('Fill all');
- const id=title.replace(/\s+/g,'-').toLowerCase()+'-'+Date.now();
- const newMix={id,title,link,cover};
- const res=await fetch('https://api.github.com/repos/starjoydegzza-design/Lekompo/contents/mixes.json');
- const data=await res.json();
- const content=JSON.parse(atob(data.content));
- content.push(newMix);
- await fetch('https://api.github.com/repos/starjoydegzza-design/Lekompo/contents/mixes.json',{
-  method:'PUT',
-  headers:{Authorization:'token '+token},
-  body:JSON.stringify({message:'Add mix',content:btoa(JSON.stringify(content,null,2)),sha:data.sha})
- });
- alert('Published!'); loadBoard();
-}
-</script>
-</body>
-</html>
+ const mixes=await res.json
