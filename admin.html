@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lekompo Admin</title>
+<style>
+body{font-family:Arial;background:#111;color:#fff;padding:20px;max-width:600px;margin:auto}
+input,textarea{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none}
+button{width:100%;padding:15px;background:#1DB954;color:#fff;border:none;border-radius:10px;font-weight:bold;font-size:16px;margin-top:10px}
+.card{background:#222;padding:15px;border-radius:12px;margin-top:20px}
+small{color:#aaa}
+</style>
+</head>
+<body>
+<h2>🔐 Lekompo Admin</h2>
+<div class="card">
+<small>GitHub Token (saved only on your phone)</small>
+<input type="password" id="token" placeholder="Paste your new token here">
+<button onclick="saveToken()">Save Token</button>
+<p id="tokenStatus"></p>
+</div>
+
+<div class="card">
+<h3>Add New Mix</h3>
+<input id="title" placeholder="Mix Title e.g. Lekompo 2025 Vol 1">
+<input id="artist" placeholder="Artist / DJ">
+<input id="link" placeholder="Google Drive Link">
+<input id="cover" placeholder="Cover Image Link (optional)">
+<textarea id="desc" placeholder="Description"></textarea>
+<button onclick="addMix()">🚀 Publish Mix</button>
+<p id="status"></p>
+</div>
+
+<script>
+const owner='starjoydegzza-design';
+const repo='Lekompo';
+const filePath='mixes.json';
+
+function saveToken(){
+ localStorage.setItem('gh_token', document.getElementById('token').value.trim());
+ document.getElementById('tokenStatus').innerText='✅ Token saved!';
+}
+document.getElementById('token').value=localStorage.getItem('gh_token')||'';
+
+async function addMix(){
+ const token=localStorage.getItem('gh_token');
+ if(!token) return alert('Save token first!');
+ const title=document.getElementById('title').value;
+ const artist=document.getElementById('artist').value;
+ const link=document.getElementById('link').value;
+ const cover=document.getElementById('cover').value;
+ const desc=document.getElementById('desc').value;
+ if(!title||!link) return alert('Title and Drive Link required');
+ document.getElementById('status').innerText='⏳ Publishing...';
+
+ // get existing file
+ let sha=null;
+ let mixes=[];
+ try{
+  let res=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,{headers:{Authorization:`token ${token}`}});
+  if(res.ok){let data=await res.json(); sha=data
