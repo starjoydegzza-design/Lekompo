@@ -11,16 +11,36 @@ h1{text-align:center;color:#ff0055}
 .mix img{width:100px;height:100px;border-radius:10px;object-fit:cover}
 .title{font-weight:bold;font-size:18px}
 .vote{margin-top:10px;padding:10px 20px;border:none;border-radius:20px;background:#00ff88;color:black;font-weight:bold;cursor:pointer}
-.vote.voted{background:#555;color:#aaa}
+.vote:disabled{background:#555;color:#aaa;cursor:not-allowed}
+.closed{text-align:center;background:#331111;padding:12px;border-radius:10px;margin-bottom:15px;color:#ff8888}
 </style>
 </head>
 <body>
 <h1>🎧 Vote Your Favourite</h1>
+<div id="status"></div>
 <div id="mixes"></div>
 <script>
 const API_BASE="https://countapi.mileshilliard.com/api/v1";
 const NAMESPACE="lekompo-starjoydegzza-2026";
+
+function isWeekendOpen(){
+ // SA Time (GMT+2) = SAST
+ const now = new Date();
+ const saTime = new Date(now.toLocaleString("en-US", {timeZone: "Africa/Johannesburg"}));
+ const day = saTime.getDay(); // 0=Sun, 6=Sat
+ const hour = saTime.getHours();
+ // Open Sat 00:00 to Sun 23:59
+ if(day===6) return true; // Saturday
+ if(day===0) return true; // Sunday
+ return false;
+}
+
 async function loadMixes(){
+ const open = isWeekendOpen();
+ const statusDiv = document.getElementById('status');
+ if(!open){
+   statusDiv.innerHTML = '<div class="closed">⛔ Voting CLOSED — Opens Saturday 00:00 to Sunday 23:59 (SA Time)</div>';
+ }
  const res=await fetch('mixes.json?t='+Date.now());
  const mixes=await res.json();
  const c=document.getElementById('mixes');
@@ -28,15 +48,18 @@ async function loadMixes(){
  mixes.slice().reverse().forEach(m=>{
   const id=m.id||m.title.replace(/\s+/g,'-').toLowerCase();
   const voted=localStorage.getItem('voted-'+id);
-  c.innerHTML+=`<div class="mix"><img src="${m.cover}"><div><div class="title">${m.title}</div><button class="vote ${voted?'voted':''}" onclick="vote('${id}',this)" ${voted?'disabled':''}>${voted?'✅ Voted':'👍 Vote'}</button></div></div>`;
+  let btnText = voted?'✅ Voted': (open?'👍 Vote':'Closed');
+  let disabled = voted || !open ? 'disabled' : '';
+  c.innerHTML+=`<div class="mix"><img src="${m.cover}"><div><div class="title">${m.title}</div><button class="vote" onclick="vote('${id}',this)" ${disabled}>${btnText}</button></div></div>`;
  });
 }
 async function vote(id,btn){
+ if(!isWeekendOpen()) return alert('Voting closed. Only Sat-Sun');
  if(localStorage.getItem('voted-'+id))return;
  btn.textContent='Voting...';
  await fetch(`${API_BASE}/hit/${NAMESPACE}_${id}`);
  localStorage.setItem('voted-'+id,'1');
- btn.textContent='✅ Voted'; btn.disabled=true; btn.classList.add('voted');
+ btn.textContent='✅ Voted'; btn.disabled=true;
 }
 loadMixes();
 </script>
