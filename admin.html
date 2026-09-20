@@ -6,7 +6,7 @@
 <style>
 body{background:#0a0a0a;color:#fff;font-family:sans-serif;padding:12px}
 h1{color:#ff1a5e;text-align:center}
-input,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:none}
+input,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:none;box-sizing:border-box}
 button{background:#ff1a5e;color:#fff;font-weight:bold}
 .card{background:#1a1a1a;border-radius:12px;padding:10px;margin:8px 0;display:flex;align-items:center;gap:10px}
 .card img{width:50px;height:50px;border-radius:8px;object-fit:cover}
@@ -15,41 +15,72 @@ button{background:#ff1a5e;color:#fff;font-weight:bold}
 </head>
 <body>
 <h1>🎧 Admin Dashboard</h1>
-<input id="title" placeholder="Title">
-<input type="file" id="file">
-<input id="token" placeholder="Token ghp_...">
-<button onclick="upload()">Upload</button>
+<input id="title" placeholder="Title - e.g Twerka Mama Muhn">
+<input type="file" id="file" accept="image/*">
+<input id="token" placeholder="Paste Token ghp_...">
+<button onclick="upload()" id="ubtn">Upload</button>
 <div id="stats" style="text-align:center;margin:15px;color:#aaa">Loading votes...</div>
 <div id="list"></div>
+
 <script>
-const NAMESPACE = "lekompo-2026-v1"; // unique for your site
+const NAMESPACE = "lekompo-2026-v1";
+const REPO = "starjoydegzza-design/Lekompo";
 
 async function load(){
-  const mixes = await (await fetch('mixes.json?v='+Date.now())).json();
-  const list=document.getElementById('list');
-  list.innerHTML='';
-  let totalVotes = 0;
-  for(let m of mixes){
-    // Get vote count from free API
-    let count = 0;
-    try{
-      const r = await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${m.id}`);
-      const d = await r.json();
-      count = d.value || 0;
-    }catch(e){ count = 0; }
-    totalVotes += count;
-    const div=document.createElement('div');
-    div.className='card';
-    div.innerHTML=`<img src="${m.cover}"><span>${m.title}</span><span class="badge">❤️ ${count}</span>`;
-    list.appendChild(div);
-  }
-  document.getElementById('stats').innerText = `${mixes.length} mixes | ${totalVotes} total votes`;
+  try{
+    const mixes = await (await fetch('mixes.json?v='+Date.now())).json();
+    const list=document.getElementById('list');
+    list.innerHTML='';
+    let totalVotes = 0;
+    for(let m of mixes.reverse()){
+      let count = 0;
+      try{
+        const r = await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${m.id}`);
+        const d = await r.json();
+        count = d.value || 0;
+      }catch(e){ count = 0; }
+      totalVotes += count;
+      const div=document.createElement('div');
+      div.className='card';
+      div.innerHTML=`<img src="${m.cover}"><span>${m.title}</span><span class="badge">❤️ ${count}</span>`;
+      list.appendChild(div);
+    }
+    document.getElementById('stats').innerText = `${mixes.length} mixes | ${totalVotes} total votes`;
+  }catch(e){ document.getElementById('stats').innerText = "No mixes yet"; }
 }
 load();
 
-// Your old upload function stays same - add it here below
 async function upload(){
-  alert("Use your old upload code here - keep your existing function, or tell me to add it back");
+  const title=document.getElementById('title').value.trim();
+  const file=document.getElementById('file').files[0];
+  const token=document.getElementById('token').value.trim();
+  if(!title || !file || !token) return alert("Fill title, choose file, paste token");
+  document.getElementById('ubtn').innerText="Uploading...";
+  const reader=new FileReader();
+  reader.onload=async()=>{
+    const base64=reader.result.split(',')[1];
+    const fileName=`covers/${Date.now()}_${file.name}`.replace(/\s/g,'_');
+    // 1. upload image
+    await fetch(`https://api.github.com/repos/${REPO}/contents/${fileName}`,{
+      method:"PUT",
+      headers:{Authorization:`token ${token}`,"Content-Type":"application/json"},
+      body:JSON.stringify({message:`add ${title}`,content:base64})
+    });
+    // 2. update mixes.json
+    let mixes=[]; let sha=null;
+    try{
+      const r=await fetch(`https://api.github.com/repos/${REPO}/contents/mixes.json`);
+      const j=await r.json(); sha=j.sha; mixes=JSON.parse(atob(j.content));
+    }catch(e){}
+    mixes.push({id:Date.now().toString(), title:title, cover:fileName});
+    await fetch(`https://api.github.com/repos/${REPO}/contents/mixes.json`,{
+      method:"PUT",
+      headers:{Authorization:`token ${token}`,"Content-Type":"application/json"},
+      body:JSON.stringify({message:`update mixes`,content:btoa(JSON.stringify(mixes,null,2)),sha:sha})
+    });
+    alert("Uploaded!"); document.getElementById('ubtn').innerText="Upload"; load();
+  };
+  reader.readAsDataURL(file);
 }
 </script>
 </body>
