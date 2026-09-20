@@ -5,103 +5,85 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lekompo Admin</title>
 <style>
-body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:14px}
-input{padding:14px;width:92%;max-width:360px;border-radius:12px;border:none;font-size:16px;margin:8px auto;display:block;background:#1a1a1a;color:#fff;border:1px solid #333}
-button{background:#ff1a5e;color:#fff;border:none;padding:14px 30px;border-radius:12px;font-weight:bold;display:block;margin:10px auto;cursor:pointer}
+body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:15px}
+input{width:100%;max-width:400px;padding:14px;border-radius:12px;border:1px solid #333;background:#1a1a1a;color:#fff;display:block;margin:8px auto;font-size:15px;box-sizing:border-box}
+button{background:#ff1a5e;color:#fff;border:none;padding:14px;border-radius:12px;font-weight:bold;width:100%;max-width:400px;display:block;margin:10px auto;cursor:pointer}
 #panel{display:none}
-.card{background:#1a1a1a;padding:12px;border-radius:14px;margin:10px 0;display:flex;gap:12px;align-items:center;border-left:5px solid #ff1a5e;position:relative}
-.card img{width:70px;height:70px;border-radius:10px;object-fit:cover}
-.delBtn{background:#222;color:#ff5555;border:1px solid #ff1a5e;padding:6px 12px;border-radius:8px;font-size:12px;margin:0}
-.addBox{background:#111;padding:16px;border-radius:16px;border:1px solid #222;margin:15px 0}
-.totalBox{background:linear-gradient(90deg,#ff1a5e,#ff5e8a);padding:14px;border-radius:12px;text-align:center;font-weight:bold;margin:12px 0}
+.card{background:#1a1a1a;padding:12px;border-radius:12px;margin:10px auto;display:flex;gap:12px;align-items:center;max-width:500px}
+.card img{width:65px;height:65px;border-radius:10px;object-fit:cover}
+.del{padding:8px 12px;background:#222;border:1px solid #ff1a5e;color:#ff5555;border-radius:8px;width:auto;margin:0}
+.box{background:#111;padding:16px;border-radius:14px;border:1px solid #222;max-width:500px;margin:15px auto}
+.live{color:#ff8fab;font-weight:bold}
 </style>
 </head>
 <body>
 
-<div id="loginScreen" style="text-align:center;padding-top:60px">
-<h1 style="color:#ff1a5e">🔐 LEKOMPO ADMIN</h1>
-<input id="pass" type="password" placeholder="Password">
-<button onclick="loginNow()">LOGIN</button>
-<p id="msg" style="color:#ff5555"></p>
+<div id="login" style="text-align:center;padding-top:70px">
+<h1 style="color:#ff1a5e">ADMIN</h1>
+<input id="p" type="password" placeholder="Password">
+<button onclick="go()">LOGIN</button>
 </div>
 
 <div id="panel">
-<h2 style="color:#ff1a5e;text-align:center">📊 LIVE VOTE COUNTING ● LIVE</h2>
-<div id="total" class="totalBox">Loading...</div>
+<h2 style="text-align:center;color:#ff1a5e">LIVE VOTES</h2>
+<div id="total" style="text-align:center;background:#ff1a5e;padding:12px;border-radius:12px;max-width:500px;margin:auto;font-weight:bold">Loading...</div>
 
-<div class="addBox">
-<h3 style="margin:0 0 10px;color:#ff1a5e;text-align:center">➕ ADD NEW MIX</h3>
-<input id="title" placeholder="Mix Title - e.g. Malešala">
-<input id="cover" placeholder="Paste Image URL (or upload below)">
-<input type="file" id="file" accept="image/*" style="padding:10px">
-<img id="preview" style="width:100%;max-width:200px;border-radius:12px;display:none;margin:10px auto">
-<button onclick="addMix()" style="width:100%;background:#00ff88;color:#000">ADD MIX NOW</button>
-<p style="font-size:11px;color:#888;text-align:center">After adding, scroll down and click DOWNLOAD mixes.json and upload it to GitHub</p>
+<div class="box">
+<h3 style="color:#ff1a5e;text-align:center;margin:0 0 10px">ADD MIX</h3>
+<input id="ghp" type="password" placeholder="Paste ghp_ token here (saved)">
+<input id="title" placeholder="Mix Title">
+<input id="cover" placeholder="Artwork URL (or upload below)">
+<input type="file" id="file" accept="image/*">
+<img id="prev" style="width:120px;border-radius:10px;display:none;margin:10px auto">
+<button onclick="add()" style="background:#00ff88;color:#000">ADD + PUSH TO GITHUB</button>
+<p id="status" style="text-align:center;font-size:13px;color:#888"></p>
 </div>
 
 <div id="list"></div>
-
-<button onclick="downloadJSON()" style="background:#222;border:1px solid #ff1a5e;width:100%">⬇️ DOWNLOAD mixes.json (Upload to GitHub)</button>
-<button onclick="location.reload()" style="background:#333;width:100%">Logout</button>
 </div>
 
 <script>
-let mixes = [];
-const STORAGE_KEY = 'lekompo_admin_mixes';
+const REPO="starjoydegzza-design/Lekompo";
+const FILE_PATH="mixes.json";
+let mixes=[], sha="";
 
-// LOGIN - NO PASSWORD SHOWING
-function loginNow(){
- if(document.getElementById('pass').value.trim()==='lekompo123'){
-  document.getElementById('loginScreen').style.display='none';
-  document.getElementById('panel').style.display='block';
-  init();
-  setInterval(loadVotes,3000);
- }else{
-  document.getElementById('msg').innerText='❌ Wrong password';
- }
+function go(){
+ if(document.getElementById('p').value!=='lekompo123'){alert('Wrong');return;}
+ document.getElementById('login').style.display='none';
+ document.getElementById('panel').style.display='block';
+ const saved=localStorage.getItem('ghp_token');
+ if(saved) document.getElementById('ghp').value=saved;
+ load();
+ setInterval(loadVotes,4000);
 }
 
-// PREVIEW
-document.getElementById('file').addEventListener('change', function(e){
- const file=e.target.files[0];
- if(!file) return;
- const reader=new FileReader();
- reader.onload=function(ev){
-  document.getElementById('preview').src=ev.target.result;
-  document.getElementById('preview').style.display='block';
-  document.getElementById('cover').value=ev.target.result; // base64
+document.getElementById('file').addEventListener('change',e=>{
+ const f=e.target.files[0]; if(!f) return;
+ const r=new FileReader();
+ r.onload=ev=>{
+  document.getElementById('cover').value=ev.target.result;
+  document.getElementById('prev').src=ev.target.result;
+  document.getElementById('prev').style.display='block';
  };
- reader.readAsDataURL(file);
-});
-document.getElementById('cover').addEventListener('input', function(){
- if(this.value.startsWith('http')){
-  document.getElementById('preview').src=this.value;
-  document.getElementById('preview').style.display='block';
- }
+ r.readAsDataURL(f);
 });
 
-async function init(){
+async function load(){
+ const token=document.getElementById('ghp').value.trim() || localStorage.getItem('ghp_token') || '';
  try{
-  const r=await fetch('mixes.json?v='+Date.now());
-  const remote=await r.json();
-  mixes=remote;
- }catch(e){
-  const local=localStorage.getItem(STORAGE_KEY);
-  if(local) mixes=JSON.parse(local);
- }
- saveLocal();
+  if(token){
+   const res=await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,{headers:{Authorization:`token ${token}`}});
+   const data=await res.json();
+   sha=data.sha;
+   mixes=JSON.parse(atob(data.content));
+  } else {
+   const res=await fetch(`${FILE_PATH}?v=${Date.now()}`);
+   mixes=await res.json();
+  }
+ }catch(e){mixes=[];}
  loadVotes();
 }
 
-function saveLocal(){
- localStorage.setItem(STORAGE_KEY, JSON.stringify(mixes));
-}
-
-function addMix(){
- const title=document.getElementById('title').value.trim();
- let cover=document.getElementById('cover').value.trim();
- if(!title||!cover){alert('Add Title + Artwork!');return;}
- const id='mix_'+Date.now();
- mixes.unshift({id, title, cover});
- document.getElementById('title').value='';
- document.get
+async function getCount(id){
+ try{
+  const r=await fetch(`https://api.counterapi.dev/v1/lekompo-
