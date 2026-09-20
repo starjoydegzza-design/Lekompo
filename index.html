@@ -9,6 +9,7 @@
 body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:12px}
 h1{color:#ff1a5e;text-align:center;margin:10px 0}
 #status{text-align:center;margin:10px;color:#aaa;font-size:14px}
+#closed{background:#ff1a5e;color:#fff;text-align:center;padding:14px;border-radius:12px;margin:10px 0;font-weight:bold;display:none}
 #list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .card{background:#1a1a1a;border-radius:16px;overflow:hidden;padding-bottom:10px;box-shadow:0 4px 10px rgba(0,0,0,.5)}
 .card img{width:100%;height:160px;object-fit:cover;display:block}
@@ -20,27 +21,57 @@ button:disabled{background:#444;color:#999}
 </head>
 <body>
 <h1>🎧 Lekompo Mix Battle</h1>
+<div id="closed"></div>
 <div id="status">Loading mixes...</div>
 <div id="list"></div>
 <script>
 const NAMESPACE = "lekompo-2026-v1";
+function isWeekendOpen(){
+  const now = new Date();
+  // South Africa time is GMT+2 - using local phone time
+  const day = now.getDay(); // 0=Sun, 6=Sat
+  return day === 6 || day === 0;
+}
+function nextOpenTime(){
+  const now = new Date();
+  let daysUntilSat = (6 - now.getDay() + 7) % 7;
+  if(daysUntilSat===0 && now.getDay()!==6) daysUntilSat=7;
+  if(daysUntilSat===0) daysUntilSat=7; 
+  // Simple message
+  return "Voting opens Saturday 00:00";
+}
 async function load(){
   try{
     const r = await fetch('mixes.json?v=' + Date.now());
     const mixes = await r.json();
     const list = document.getElementById('list');
     list.innerHTML = '';
-    document.getElementById('status').innerText = `${mixes.length} mixes • 1 vote per person`;
+    const open = isWeekendOpen();
+    if(!open){
+      document.getElementById('closed').style.display='block';
+      document.getElementById('closed').innerText='🔒 VOTING CLOSED - Opens Saturday 00:00 to Sunday 23:59 (SA Time)';
+      document.getElementById('status').innerText='You can view mixes, but voting is closed now';
+    } else {
+      document.getElementById('closed').style.display='none';
+      document.getElementById('status').innerText=`${mixes.length} mixes • Voting OPEN until Sunday 23:59! • 1 vote per person`;
+    }
     for(let m of [...mixes].reverse()){
       let count = 0;
-      try{        try{
+      try{
         const cr = await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${m.id}`);
         const cd = await cr.json();
         count = cd.value || 0;
       }catch(e){ count = 0; }
       const hasVoted = localStorage.getItem('lekompo_hasVoted');
-      const btnText = hasVoted ? (hasVoted===m.id ? "✅ Your Vote" : "Already Voted") : "Vote ❤️";
-      const disabled = hasVoted ? "disabled" : "";
+      let btnText = "Vote ❤️";
+      let disabled = "";
+      if(!open){
+        btnText = "Closed 🔒";
+        disabled = "disabled";
+      } else if(hasVoted){
+        btnText = hasVoted===m.id ? "✅ Your Vote" : "Already Voted";
+        disabled = "disabled";
+      }
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `<img src="${m.cover}"><h3>${m.title}</h3><div class="votes">❤️ ${count} votes</div><button ${disabled} onclick="vote('${m.id}')">${btnText}</button>`;
@@ -51,6 +82,10 @@ async function load(){
   }
 }
 async function vote(id){
+  if(!isWeekendOpen()){
+    alert("🔒 Voting is closed! Only Saturday 00:00 to Sunday 23:59");
+    return;
+  }
   if(localStorage.getItem('lekompo_hasVoted')){
     alert("❌ You already voted! Only 1 vote per phone.");
     return;
