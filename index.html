@@ -2,140 +2,137 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lekompo Voting</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LEKOMPO BATTLE</title>
 <style>
-*{box-sizing:border-box}
-body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:12px}
-h1{color:#ff1a5e;text-align:center;margin:10px 0}
-#status{text-align:center;margin:10px;color:#aaa;font-size:14px}
-#closed{background:#ff1a5e;color:#fff;text-align:center;padding:14px;border-radius:12px;margin:10px 0;font-weight:bold;display:none}
-#list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{background:#1a1a1a;border-radius:16px;overflow:hidden;padding-bottom:10px;box-shadow:0 4px 10px rgba(0,0,0,.5)}
-.card img{width:100%;height:160px;object-fit:cover;display:block}
-.card h3{font-size:13px;margin:8px 6px;text-align:center;min-height:32px}
-.votes{text-align:center;font-size:12px;color:#ff8fab;margin:2px 0}
-button{background:#ff1a5e;color:#fff;border:none;width:92%;margin:6px 4%;padding:10px;border-radius:10px;font-weight:bold;font-size:14px}
-button:disabled{background:#444;color:#999}
+body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:14px}
+.card{background:#1a1a1a;padding:12px;border-radius:14px;margin:12px 0;display:flex;gap:12px;align-items:center;border-left:5px solid #ff1a5e}
+.card img{width:80px;height:80px;border-radius:10px;object-fit:cover}
+button{background:#ff1a5e;color:#fff;border:none;padding:10px 20px;border-radius:20px;font-weight:bold}
+button:disabled{background:#333;color:#888}
+.votes{color:#ff8fab;font-weight:bold}
+#status{text-align:center;padding:10px;font-weight:bold}
 </style>
 </head>
 <body>
-<h1>🎧 Lekompo Mix Battle</h1>
-<div id="closed"></div>
-<div id="status">Loading mixes...</div>
+<h1 style="text-align:center;color:#ff1a5e">🔥 LEKOMPO BATTLE 🔥</h1>
+<div id="status"></div>
 <div id="list"></div>
+
 <script>
-const NAMESPACE = "lekompo-2026-v1";
-function isWeekendOpen(){
-  const now = new Date();
-  const day = now.getDay();
-  return day === 6 || day === 0;
-}
 function getWeekendKey(){
-  const now = new Date();
-  const day = now.getDay();
-  const sat = new Date(now);
-  if(day === 0){ sat.setDate(now.getDate() - 1); } // Sunday -> Saturday was yesterday
-  // YYYY-MM-DD of Saturday = unique ID for this weekend
-  return `${sat.getFullYear()}-${sat.getMonth()+1}-${sat.getDate()}`;
+  let now=new Date();
+  let day=now.getDay();
+  let diff=now.getDate()-day+6;
+  let sat=new Date(now.setDate(diff));
+  return sat.getFullYear()+'-W'+(sat.getMonth()+1)+'-'+sat.getDate();
 }
-async function load(){
+function isWeekendOpen(){
+  let now=new Date();
+  let day=now.getDay();
+  let hour=now.getHours();
+  // Saturday 00:00 (6) to Sunday 23:59 (0)
+  return (day===6 || day===0);
+}
+
+async function loadMixes(){
   try{
-    const r = await fetch('mixes.json?v=' + Date.now());
-    const mixes = await r.json();
-    const list = document.getElementById('list');
-    list.innerHTML = '';
-    const open = isWeekendOpen();
-    const weekendKey = getWeekendKey();
-    const saved = JSON.parse(localStorage.getItem('lekompo_vote') || 'null');
-    // If saved vote is from old weekend, clear it - allow new vote this weekend
-    if(saved && saved.weekendKey !== weekendKey && open){
-      localStorage.removeItem('lekompo_vote');
-    }
-    const currentVote = JSON.parse(localStorage.getItem('lekompo_vote') || 'null');
-    const hasVotedThisWeekend = currentVote && currentVote.weekendKey === weekendKey;
-    if(!open){
-      document.getElementById('closed').style.display='block';
-      document.getElementById('closed').innerText='🔒 VOTING CLOSED - Opens Saturday 00:00 to Sunday 23:59 (SA Time)';
-      document.getElementById('status').innerText='You can view mixes, but voting is closed now';
-    } else {
-      document.getElementById('closed').style.display='none';
-      document.getElementById('status').innerText=`${mixes.length} mixes • Voting OPEN this weekend! • 1 vote per phone THIS WEEKEND`;
-    }
-    for(let m of [...mixes].reverse()){
-      let count = 0;
-      try{
-        const cr = await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${m.id}`);
-        const cd = await cr.json();
-        count = cd.value || 0;
-      }catch(e){ count = 0; }
-      let btnText = "Vote ❤️";
-      let disabled = "";
-      if(!open){
-        btnText = "Closed 🔒";
-        disabled = "disabled";
-      } else if(hasVotedThisWeekend){
-        btnText = currentVote.id===m.id ? "✅ Your Vote This Weekend" : "Already Voted This Weekend";
-        disabled = "disabled";
+    const r=await fetch('mixes.json?v='+Date.now());
+    const mixes=await r.json();
+    const list=document.getElementById('list');
+    const statusEl=document.getElementById('status');
+    const weekendKey=getWeekendKey();
+    const votedWeekend=JSON.parse(localStorage.getItem('lekompo_voted')||'null');
+    const hasVotedThisWeekend = votedWeekend && votedWeekend.key===weekendKey;
+
+    if(!isWeekendOpen()){
+      statusEl.innerHTML='<div style="background:#333;padding:10px;border-radius:10px">🔒 VOTING CLOSED - Opens Saturday 00:00 to Sunday 23:59 (SA Time)</div>';
+    }else{
+      if(hasVotedThisWeekend){
+        statusEl.innerHTML='✅ You already voted this weekend! Come back next Saturday';
+      }else{
+        statusEl.innerHTML=`🎧 ${mixes.length} mixes - Voting OPEN this weekend! 1 vote per phone`;
       }
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `<img src="${m.cover}"><h3>${m.title}</h3><div class="votes">❤️ ${count} votes</div><button ${disabled} onclick="vote('${m.id}')">${btnText}</button>`;
+    }
+
+    list.innerHTML='';
+    for(let m of mixes.reverse()){
+      let count=0;
+      try{
+        const res=await fetch(`https://api.countapi.xyz/get/lekompo-2026-v1/${m.id}`);
+        const d=await res.json();
+        count=d.value||0;
+      }catch(e){ count=0; }
+
+      let btnText='Vote';
+      let disabled='';
+      if(!isWeekendOpen()){
+        btnText='Closed';
+        disabled='disabled';
+      }else if(hasVotedThisWeekend){
+        btnText = votedWeekend.id===m.id ? 'Your Vote This Weekend' : 'Already Voted';
+        disabled='disabled';
+      }
+
+      const card=document.createElement('div');
+      card.className='card';
+      card.innerHTML=`<img src="${m.cover}"><div style="flex:1"><b>${m.title}</b><br><div class="votes" id="count-${m.id}">❤️ ${count} votes LIVE</div></div><button id="btn-${m.id}" onclick="vote('${m.id}', this)" ${disabled}>${btnText}</button>`;
       list.appendChild(card);
     }
   }catch(e){
-    document.getElementById('status').innerText = "No mixes found. Upload in admin.html";
+    document.getElementById('status').innerText='No mixes found. Upload in admin.html';
   }
 }
-async function vote(id){
-  if(!isWeekendOpen()){
-    alert("🔒 Voting is closed! Only Saturday 00:00 to Sunday 23:59");
-    return;
-  }
-  const weekendKey = getWeekendKey();
-  const saved = JSON.parse(localStorage.getItem('lekompo_vote') || 'null');
-  if(saved && saved.weekendKey === weekendKey){
-    alert("❌ You already voted THIS WEEKEND! Come back next Saturday.");
-    return;
-  }
-  localStorage.setItem('lekompo_vote', JSON.stringify({id, weekendKey}));
-  try{ await fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${id}`); }catch(e){}
-  alert("✅ Your vote for THIS WEEKEND is counted!");
-  load();
-}// LIVE VOTE SENDER - sends to Admin every second
+
 async function vote(id, btn){
-  if(localStorage.getItem('voted_'+id)){
-    alert('You already voted for this mix! ❤️');
+  if(!isWeekendOpen()){
+    alert('Voting is closed! Only Saturday 00:00 to Sunday 23:59');
     return;
   }
-  
-  btn.innerText = 'Voting...';
-  btn.disabled = true;
-  
+  const weekendKey=getWeekendKey();
+  const votedWeekend=JSON.parse(localStorage.getItem('lekompo_voted')||'null');
+  if(votedWeekend && votedWeekend.key===weekendKey){
+    alert('❌ You already voted THIS WEEKEND! Come back next Saturday');
+    return;
+  }
+
+  btn.innerText='Voting...';
+  btn.disabled=true;
+
   try{
-    // SEND TO ADMIN LIVE COUNTER
-    const res = await fetch(`https://api.countapi.xyz/hit/lekompo-2026-v1/${id}`);
-    const data = await res.json();
-    
-    localStorage.setItem('voted_'+id, '1');
-    btn.innerText = `❤️ ${data.value} VOTES`;
-    btn.style.background = '#00ff88';
-    btn.style.color = '#000';
-    
-    // Update display instantly
-    if(document.getElementById('count-'+id)){
-      document.getElementById('count-'+id).innerText = `❤️ ${data.value} votes LIVE`;
-    }
-    
-    console.log('VOTE SENT TO ADMIN:', id, data.value);
-    
+    const res=await fetch(`https://api.countapi.xyz/hit/lekompo-2026-v1/${id}`);
+    const data=await res.json();
+    localStorage.setItem('lekompo_voted', JSON.stringify({id, key:weekendKey}));
+    btn.innerText=`❤️ ${data.value} VOTES`;
+    btn.style.background='#00ff88';
+    btn.style.color='#000';
+    document.getElementById('count-'+id).innerText=`❤️ ${data.value} votes LIVE`;
+    alert('✅ Your vote for THIS WEEKEND is counted!');
+    loadMixes(); // refresh buttons
   }catch(e){
-    // Fallback if API down - still count locally
-    let localVotes = parseInt(localStorage.getItem('local_'+id) || '0') + 1;
-    localStorage.setItem('local_'+id, localVotes);
-    localStorage.setItem('voted_'+id, '1');
-    btn.inner
-load();
+    alert('Network error - try again');
+    btn.innerText='Vote';
+    btn.disabled=false;
+  }
+}
+
+// Refresh live counts every 3 secs - SENDS TO ADMIN
+async function refreshCounts(){
+  try{
+    const mixes=await fetch('mixes.json?v='+Date.now()).then(r=>r.json());
+    for(let m of mixes){
+      try{
+        const res=await fetch(`https://api.countapi.xyz/get/lekompo-2026-v1/${m.id}?v=`+Date.now());
+        const data=await res.json();
+        const el=document.getElementById('count-'+m.id);
+        if(el) el.innerText=`❤️ ${data.value||0} votes LIVE`;
+      }catch(e){}
+    }
+  }catch(e){}
+}
+
+loadMixes();
+setInterval(refreshCounts, 3000);
 </script>
 </body>
 </html>
