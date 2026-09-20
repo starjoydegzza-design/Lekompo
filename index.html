@@ -22,10 +22,8 @@ button:disabled{background:#444;color:#999}
 <h1>🎧 Lekompo Mix Battle</h1>
 <div id="status">Loading mixes...</div>
 <div id="list"></div>
-
 <script>
-const NAMESPACE = "lekompo-2026-v1"; // same as admin.html
-
+const NAMESPACE = "lekompo-2026-v1";
 async function load(){
   try{
     const r = await fetch('mixes.json?v=' + Date.now());
@@ -33,14 +31,6 @@ async function load(){
     const list = document.getElementById('list');
     list.innerHTML = '';
     document.getElementById('status').innerText = `${mixes.length} mixes • 1 vote per person`;
-
     for(let m of [...mixes].reverse()){
       let count = 0;
       try{
-        const cr = await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${m.id}`);
-        const cd = await cr.json();
-        count = cd.value || 0;
-      }catch(e){ count = 0; }
-
-      const hasVoted = localStorage.getItem('lekompo_hasVoted');
-      const btnText = has
