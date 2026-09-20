@@ -1,87 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin - Lekompo</title>
+<title>Lekompo Admin</title>
 <style>
-body{background:#0a0a0a;color:#fff;font-family:sans-serif;padding:12px}
-h1{color:#ff1a5e;text-align:center}
-input,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:none;box-sizing:border-box}
+body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:12px}
+#login{position:fixed;inset:0;background:#0a0a0a;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+#login input{padding:14px;width:280px;border-radius:12px;border:none;margin:12px;text-align:center;font-size:16px}
+#login button{background:#ff1a5e;color:#fff;border:none;padding:12px 40px;border-radius:12px;font-weight:bold;font-size:16px}
+.card{background:#1a1a1a;border-radius:14px;padding:12px;margin:10px 0;display:flex;gap:12px;align-items:center;border-left:4px solid #ff1a5e}
+.card img{width:70px;height:70px;object-fit:cover;border-radius:10px}
+.card b{font-size:15px}
+.votes{color:#ff8fab;font-weight:bold;font-size:16px}
+input,button{padding:12px;border-radius:10px;border:none}
 button{background:#ff1a5e;color:#fff;font-weight:bold}
-.card{background:#1a1a1a;border-radius:12px;padding:10px;margin:8px 0;display:flex;align-items:center;gap:10px}
-.card img{width:50px;height:50px;border-radius:8px;object-fit:cover}
-.badge{margin-left:auto;background:#ff1a5e;padding:4px 10px;border-radius:20px;font-weight:bold}
+#addBox{background:#1a1a1a;padding:16px;border-radius:14px;margin:12px 0;border:1px solid #333}
+.totalBox{background:linear-gradient(90deg,#ff1a5e,#ff5e8a);padding:14px;border-radius:12px;text-align:center;font-weight:bold;font-size:18px;margin:12px 0}
 </style>
 </head>
 <body>
-<h1>🎧 Admin Dashboard</h1>
-<input id="title" placeholder="Title - e.g Twerka Mama Muhn">
-<input type="file" id="file" accept="image/*">
-<input id="token" placeholder="Paste Token ghp_...">
-<button onclick="upload()" id="ubtn">Upload</button>
-<div id="stats" style="text-align:center;margin:15px;color:#aaa">Loading votes...</div>
-<div id="list"></div>
+
+<div id="login">
+<h1 style="color:#ff1a5e">🔐 LEKOMPO ADMIN</h1>
+<input id="pass" type="password" placeholder="Enter Password">
+<button onclick="checkPass()">LOGIN</button>
+<p id="msg" style="color:#ff5555;margin-top:10px"></p>
+</div>
+
+<h1 style="color:#ff1a5e;text-align:center">🎧 Lekompo Admin Panel</h1>
+<div id="totalBox" class="totalBox">Loading votes...</div>
+<div style="text-align:center;color:#aaa;font-size:12px">Auto-refreshes every 5 seconds • Live count</div>
+
+<div id="addBox">
+<h3 style="margin-top:0">➕ Add New Mix</h3>
+<input id="title" placeholder="Mix Title (e.g. Twerka Mama Muhn)" style="width:100%;margin-bottom:10px;background:#222;color:#fff">
+<input type="file" id="coverFile" accept="image/*" style="width:100%;margin-bottom:10px;background:#222;color:#fff">
+<button onclick="addMix()" style="width:100%;padding:14px;font-size:15px">Add Mix</button>
+<div id="saveMsg" style="margin-top:10px"></div>
+</div>
+
+<h3>📊 Live Vote Results</h3>
+<div id="mixList">Loading mixes...</div>
+<button onclick="logout()" style="background:#333;margin:20px 0;width:100%">Logout</button>
 
 <script>
+const ADMIN_PASSWORD = "lekompo123";
 const NAMESPACE = "lekompo-2026-v1";
-const REPO = "starjoydegzza-design/Lekompo";
 
-async function load(){
-  try{
-    const mixes = await (await fetch('mixes.json?v='+Date.now())).json();
-    const list=document.getElementById('list');
-    list.innerHTML='';
-    let totalVotes = 0;
-    for(let m of mixes.reverse()){
-      let count = 0;
-      try{
-        const r = await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${m.id}`);
-        const d = await r.json();
-        count = d.value || 0;
-      }catch(e){ count = 0; }
-      totalVotes += count;
-      const div=document.createElement('div');
-      div.className='card';
-      div.innerHTML=`<img src="${m.cover}"><span>${m.title}</span><span class="badge">❤️ ${count}</span>`;
-      list.appendChild(div);
-    }
-    document.getElementById('stats').innerText = `${mixes.length} mixes | ${totalVotes} total votes`;
-  }catch(e){ document.getElementById('stats').innerText = "No mixes yet"; }
-}
-load();
-
-async function upload(){
-  const title=document.getElementById('title').value.trim();
-  const file=document.getElementById('file').files[0];
-  const token=document.getElementById('token').value.trim();
-  if(!title || !file || !token) return alert("Fill title, choose file, paste token");
-  document.getElementById('ubtn').innerText="Uploading...";
-  const reader=new FileReader();
-  reader.onload=async()=>{
-    const base64=reader.result.split(',')[1];
-    const fileName=`covers/${Date.now()}_${file.name}`.replace(/\s/g,'_');
-    // 1. upload image
-    await fetch(`https://api.github.com/repos/${REPO}/contents/${fileName}`,{
-      method:"PUT",
-      headers:{Authorization:`token ${token}`,"Content-Type":"application/json"},
-      body:JSON.stringify({message:`add ${title}`,content:base64})
-    });
-    // 2. update mixes.json
-    let mixes=[]; let sha=null;
-    try{
-      const r=await fetch(`https://api.github.com/repos/${REPO}/contents/mixes.json`);
-      const j=await r.json(); sha=j.sha; mixes=JSON.parse(atob(j.content));
-    }catch(e){}
-    mixes.push({id:Date.now().toString(), title:title, cover:fileName});
-    await fetch(`https://api.github.com/repos/${REPO}/contents/mixes.json`,{
-      method:"PUT",
-      headers:{Authorization:`token ${token}`,"Content-Type":"application/json"},
-      body:JSON.stringify({message:`update mixes`,content:btoa(JSON.stringify(mixes,null,2)),sha:sha})
-    });
-    alert("Uploaded!"); document.getElementById('ubtn').innerText="Upload"; load();
-  };
-  reader.readAsDataURL(file);
-}
-</script>
-</body>
-</html>
+function checkPass(){
+  const p = document.getElementById('pass').value;
+  if(p === ADMIN_PASSWORD){
+    localStorage.setItem('lekompo_admin_ok','yes');
+    document.getElementById('login').style.display='none';
+    loadMixes();
+   
