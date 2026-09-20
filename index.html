@@ -4,32 +4,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lekompo Voting</title>
 <style>
-body{background:#0a0a0a;color:#fff;font-family:Arial;margin:0;padding:15px}
+body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:12px}
 h1{color:#ff1a5e;text-align:center}
-#list{display:grid;grid-template-columns:1fr 1fr;gap:15px}
-.card{background:#1a1a1a;border-radius:12px;padding:10px;text-align:center}
-.card img{width:100%;height:140px;object-fit:cover;border-radius:8px}
-.card h3{font-size:14px;margin:8px 0}
-button{background:#ff1a5e;color:#fff;border:none;padding:8px 15px;border-radius:20px;font-weight:bold}
+#list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:#1a1a1a;border-radius:12px;overflow:hidden;padding-bottom:8px}
+.card img{width:100%;height:140px;object-fit:cover}
+.card h3{font-size:14px;margin:8px;text-align:center}
+button{background:#ff1a5e;color:#fff;border:none;width:90%;margin:5px 5%;padding:8px;border-radius:8px;font-weight:bold}
+button:disabled{opacity:0.5;background:#555}
 </style>
 </head>
 <body>
 <h1>🎧 Vote Your Favourite</h1>
-<div id="status" style="text-align:center">Loading...</div>
+<div id="status" style="text-align:center;margin:10px">Loading mixes...</div>
 <div id="list"></div>
 <script>
 async function load(){
- const r = await fetch('mixes.json?v=' + Date.now());
- const mixes = await r.json();
- document.getElementById('status').innerHTML='';
- const list=document.getElementById('list'); list.innerHTML='';
- mixes.reverse().forEach(m=>{
-  const card=document.createElement('div');
-  card.className='card';
-  card.innerHTML=`<img src="${m.cover}"><h3>${m.title}</h3><button onclick="alert('Voted for ${m.title}')">Vote ❤️</button>`;
-  list.appendChild(card);
- });
+  const r = await fetch('mixes.json?v=' + Date.now());
+  const mixes = await r.json();
+  document.getElementById('status').innerHTML = mixes.length + " mixes - 1 vote per person";
+  const list=document.getElementById('list');
+  list.innerHTML='';
+  mixes.reverse().forEach(m=>{
+    const card=document.createElement('div');
+    card.className='card';
+    const hasVoted = localStorage.getItem('lekompo_hasVoted');
+    const btnText = hasVoted ? (hasVoted===m.id ? "✅ Your Vote" : "Already Voted") : "Vote";
+    const disabled = hasVoted ? "disabled" : "";
+    card.innerHTML=`<img src="${m.cover}"><h3>${m.title}</h3><button ${disabled} onclick="vote('${m.id}')">${btnText}</button>`;
+    list.appendChild(card);
+  });
 }
+
+function vote(id){
+  if(localStorage.getItem('lekompo_hasVoted')){
+    alert("❌ You already voted! Only 1 vote per person.");
+    return;
+  }
+  localStorage.setItem('lekompo_hasVoted', id);
+  alert("✅ Vote saved for: " + id);
+  load();
+}
+
 load();
 </script>
 </body>
