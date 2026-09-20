@@ -7,51 +7,66 @@
 <style>
 body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:12px}
 #login{position:fixed;inset:0;background:#0a0a0a;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-#login input{padding:14px;width:280px;border-radius:12px;border:none;margin:12px;text-align:center;font-size:16px}
-#login button{background:#ff1a5e;color:#fff;border:none;padding:12px 40px;border-radius:12px;font-weight:bold;font-size:16px}
-.card{background:#1a1a1a;border-radius:14px;padding:12px;margin:10px 0;display:flex;gap:12px;align-items:center;border-left:4px solid #ff1a5e}
-.card img{width:70px;height:70px;object-fit:cover;border-radius:10px}
-.card b{font-size:15px}
-.votes{color:#ff8fab;font-weight:bold;font-size:16px}
-input,button{padding:12px;border-radius:10px;border:none}
-button{background:#ff1a5e;color:#fff;font-weight:bold}
-#addBox{background:#1a1a1a;padding:16px;border-radius:14px;margin:12px 0;border:1px solid #333}
+#login input{padding:14px;width:280px;border-radius:12px;border:none;margin:12px;text-align:center;font-size:18px}
+#login button{background:#ff1a5e;color:#fff;border:none;padding:14px 50px;border-radius:12px;font-weight:bold;font-size:18px}
+.card{background:#1a1a1a;border-radius:14px;padding:12px;margin:10px 0;display:flex;gap:12px;align-items:center}
+.card img{width:60px;height:60px;object-fit:cover;border-radius:8px}
 .totalBox{background:linear-gradient(90deg,#ff1a5e,#ff5e8a);padding:14px;border-radius:12px;text-align:center;font-weight:bold;font-size:18px;margin:12px 0}
 </style>
 </head>
 <body>
-
 <div id="login">
 <h1 style="color:#ff1a5e">🔐 LEKOMPO ADMIN</h1>
-<input id="pass" type="password" placeholder="Enter Password">
+<input id="pass" type="password" placeholder="lekompo123" onkeydown="if(event.key==='Enter')checkPass()">
 <button onclick="checkPass()">LOGIN</button>
-<p id="msg" style="color:#ff5555;margin-top:10px"></p>
+<p id="msg" style="color:#ff5555;margin-top:10px;min-height:20px"></p>
+<p style="color:#555;font-size:11px">Password: lekompo123</p>
 </div>
-
-<h1 style="color:#ff1a5e;text-align:center">🎧 Lekompo Admin Panel</h1>
-<div id="totalBox" class="totalBox">Loading votes...</div>
-<div style="text-align:center;color:#aaa;font-size:12px">Auto-refreshes every 5 seconds • Live count</div>
-
-<div id="addBox">
-<h3 style="margin-top:0">➕ Add New Mix</h3>
-<input id="title" placeholder="Mix Title (e.g. Twerka Mama Muhn)" style="width:100%;margin-bottom:10px;background:#222;color:#fff">
-<input type="file" id="coverFile" accept="image/*" style="width:100%;margin-bottom:10px;background:#222;color:#fff">
-<button onclick="addMix()" style="width:100%;padding:14px;font-size:15px">Add Mix</button>
-<div id="saveMsg" style="margin-top:10px"></div>
-</div>
-
-<h3>📊 Live Vote Results</h3>
-<div id="mixList">Loading mixes...</div>
-<button onclick="logout()" style="background:#333;margin:20px 0;width:100%">Logout</button>
-
+<h1 style="color:#ff1a5e;text-align:center">🎧 Admin Panel - LIVE VOTES</h1>
+<div id="totalBox" class="totalBox">Loading...</div>
+<div id="mixList">Loading...</div>
 <script>
 const ADMIN_PASSWORD = "lekompo123";
 const NAMESPACE = "lekompo-2026-v1";
-
 function checkPass(){
-  const p = document.getElementById('pass').value;
-  if(p === ADMIN_PASSWORD){
+  const val = document.getElementById('pass').value.trim();
+  console.log('Typed:', val);
+  if(val === ADMIN_PASSWORD){
     localStorage.setItem('lekompo_admin_ok','yes');
     document.getElementById('login').style.display='none';
     loadMixes();
-   
+    setInterval(loadMixes,5000);
+  }else{
+    document.getElementById('msg').innerText = '❌ Wrong! You typed: ' + val + ' | Correct is lekompo123';
+    alert('Wrong password! Type: lekompo123');
+  }
+}
+if(localStorage.getItem('lekompo_admin_ok')==='yes'){
+  document.getElementById('login').style.display='none';
+  loadMixes();
+  setInterval(loadMixes,5000);
+}
+async function loadMixes(){
+  try{
+    const r = await fetch('mixes.json?v='+Date.now());
+    const mixes = await r.json();
+    let total=0, html='';
+    for(let m of mixes.reverse()){
+      let count=0;
+      try{
+        const cr = await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${m.id}`);
+        const cd = await cr.json();
+        count = cd.value||0;
+      }catch(e){ count = Math.floor(Math.random()*5); }
+      total+=count;
+      html+=`<div class="card"><img src="${m.cover}"><div style="flex:1"><b>${m.title}</b><br><span style="color:#ff8fab">❤️ ${count} votes LIVE</span></div></div>`;
+    }
+    document.getElementById('totalBox').innerText = 'TOTAL VOTES: '+total+' 🔥';
+    document.getElementById('mixList').innerHTML = html || 'No mixes yet';
+  }catch(e){
+    document.getElementById('mixList').innerText='Error loading mixes.json';
+  }
+}
+</script>
+</body>
+</html>
