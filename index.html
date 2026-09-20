@@ -28,17 +28,16 @@ button:disabled{background:#444;color:#999}
 const NAMESPACE = "lekompo-2026-v1";
 function isWeekendOpen(){
   const now = new Date();
-  // South Africa time is GMT+2 - using local phone time
-  const day = now.getDay(); // 0=Sun, 6=Sat
+  const day = now.getDay();
   return day === 6 || day === 0;
 }
-function nextOpenTime(){
+function getWeekendKey(){
   const now = new Date();
-  let daysUntilSat = (6 - now.getDay() + 7) % 7;
-  if(daysUntilSat===0 && now.getDay()!==6) daysUntilSat=7;
-  if(daysUntilSat===0) daysUntilSat=7; 
-  // Simple message
-  return "Voting opens Saturday 00:00";
+  const day = now.getDay();
+  const sat = new Date(now);
+  if(day === 0){ sat.setDate(now.getDate() - 1); } // Sunday -> Saturday was yesterday
+  // YYYY-MM-DD of Saturday = unique ID for this weekend
+  return `${sat.getFullYear()}-${sat.getMonth()+1}-${sat.getDate()}`;
 }
 async function load(){
   try{
@@ -47,13 +46,21 @@ async function load(){
     const list = document.getElementById('list');
     list.innerHTML = '';
     const open = isWeekendOpen();
+    const weekendKey = getWeekendKey();
+    const saved = JSON.parse(localStorage.getItem('lekompo_vote') || 'null');
+    // If saved vote is from old weekend, clear it - allow new vote this weekend
+    if(saved && saved.weekendKey !== weekendKey && open){
+      localStorage.removeItem('lekompo_vote');
+    }
+    const currentVote = JSON.parse(localStorage.getItem('lekompo_vote') || 'null');
+    const hasVotedThisWeekend = currentVote && currentVote.weekendKey === weekendKey;
     if(!open){
       document.getElementById('closed').style.display='block';
       document.getElementById('closed').innerText='🔒 VOTING CLOSED - Opens Saturday 00:00 to Sunday 23:59 (SA Time)';
       document.getElementById('status').innerText='You can view mixes, but voting is closed now';
     } else {
       document.getElementById('closed').style.display='none';
-      document.getElementById('status').innerText=`${mixes.length} mixes • Voting OPEN until Sunday 23:59! • 1 vote per person`;
+      document.getElementById('status').innerText=`${mixes.length} mixes • Voting OPEN this weekend! • 1 vote per phone THIS WEEKEND`;
     }
     for(let m of [...mixes].reverse()){
       let count = 0;
@@ -62,14 +69,13 @@ async function load(){
         const cd = await cr.json();
         count = cd.value || 0;
       }catch(e){ count = 0; }
-      const hasVoted = localStorage.getItem('lekompo_hasVoted');
       let btnText = "Vote ❤️";
       let disabled = "";
       if(!open){
         btnText = "Closed 🔒";
         disabled = "disabled";
-      } else if(hasVoted){
-        btnText = hasVoted===m.id ? "✅ Your Vote" : "Already Voted";
+      } else if(hasVotedThisWeekend){
+        btnText = currentVote.id===m.id ? "✅ Your Vote This Weekend" : "Already Voted This Weekend";
         disabled = "disabled";
       }
       const card = document.createElement('div');
@@ -86,13 +92,15 @@ async function vote(id){
     alert("🔒 Voting is closed! Only Saturday 00:00 to Sunday 23:59");
     return;
   }
-  if(localStorage.getItem('lekompo_hasVoted')){
-    alert("❌ You already voted! Only 1 vote per phone.");
+  const weekendKey = getWeekendKey();
+  const saved = JSON.parse(localStorage.getItem('lekompo_vote') || 'null');
+  if(saved && saved.weekendKey === weekendKey){
+    alert("❌ You already voted THIS WEEKEND! Come back next Saturday.");
     return;
   }
-  localStorage.setItem('lekompo_hasVoted', id);
+  localStorage.setItem('lekompo_vote', JSON.stringify({id, weekendKey}));
   try{ await fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${id}`); }catch(e){}
-  alert("✅ Your vote is counted!");
+  alert("✅ Your vote for THIS WEEKEND is counted!");
   load();
 }
 load();
