@@ -3,68 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lekompo Admin</title>
+<title>Lekompo Admin - Live Votes</title>
 <style>
-body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:12px}
-#login{position:fixed;inset:0;background:#0a0a0a;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-#login input{padding:14px;width:280px;border-radius:12px;border:none;margin:12px;text-align:center;font-size:18px}
-#login button{background:#ff1a5e;color:#fff;border:none;padding:14px 50px;border-radius:12px;font-weight:bold;font-size:18px}
-.card{background:#1a1a1a;border-radius:14px;padding:12px;margin:10px 0;display:flex;gap:12px;align-items:center}
-.card img{width:60px;height:60px;object-fit:cover;border-radius:8px}
-.totalBox{background:linear-gradient(90deg,#ff1a5e,#ff5e8a);padding:14px;border-radius:12px;text-align:center;font-weight:bold;font-size:18px;margin:12px 0}
+body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:14px}
+input{padding:16px;width:90%;max-width:300px;border-radius:12px;border:none;font-size:18px;text-align:center;margin:15px;display:block;margin-left:auto;margin-right:auto}
+button{background:#ff1a5e;color:#fff;border:none;padding:16px 50px;border-radius:12px;font-weight:bold;font-size:18px;display:block;margin:10px auto}
+#panel{display:none}
+.card{background:#1a1a1a;padding:12px;border-radius:14px;margin:10px 0;display:flex;gap:12px;align-items:center;border-left:5px solid #ff1a5e}
+.card img{width:70px;height:70px;border-radius:10px;object-fit:cover}
+.totalBox{background:linear-gradient(90deg,#ff1a5e,#ff5e8a);padding:16px;border-radius:12px;text-align:center;font-weight:bold;font-size:20px;margin:12px 0}
+.live{color:#00ff88;font-size:11px;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 </style>
 </head>
 <body>
-<div id="login">
+
+<div id="loginScreen" style="text-align:center;padding-top:40px">
 <h1 style="color:#ff1a5e">🔐 LEKOMPO ADMIN</h1>
-<input id="pass" type="password" placeholder="lekompo123" onkeydown="if(event.key==='Enter')checkPass()">
-<button onclick="checkPass()">LOGIN</button>
-<p id="msg" style="color:#ff5555;margin-top:10px;min-height:20px"></p>
-<p style="color:#555;font-size:11px">Password: lekompo123</p>
+<input id="pass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')loginNow()">
+<button onclick="loginNow()">LOGIN</button>
+<p id="msg" style="color:#ff5555"></p>
+<p style="color:#444;font-size:12px">Password: lekompo123</p>
 </div>
-<h1 style="color:#ff1a5e;text-align:center">🎧 Admin Panel - LIVE VOTES</h1>
-<div id="totalBox" class="totalBox">Loading...</div>
-<div id="mixList">Loading...</div>
+
+<div id="panel">
+<h2 style="color:#ff1a5e;text-align:center">📊 LIVE VOTE COUNTING <span class="live">● LIVE</span></h2>
+<div id="total" class="totalBox">Loading live votes...</div>
+<div id="list"></div>
+<button onclick="location.reload()" style="background:#333;width:100%">Logout</button>
+</div>
+
 <script>
-const ADMIN_PASSWORD = "lekompo123";
-const NAMESPACE = "lekompo-2026-v1";
-function checkPass(){
-  const val = document.getElementById('pass').value.trim();
-  console.log('Typed:', val);
-  if(val === ADMIN_PASSWORD){
-    localStorage.setItem('lekompo_admin_ok','yes');
-    document.getElementById('login').style.display='none';
-    loadMixes();
-    setInterval(loadMixes,5000);
+function loginNow(){
+  if(document.getElementById('pass').value.trim() === 'lekompo123'){
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('panel').style.display='block';
+    loadVotes();
+    setInterval(loadVotes,3000); // COUNT EVERY 3 SECONDS LIVE
   }else{
-    document.getElementById('msg').innerText = '❌ Wrong! You typed: ' + val + ' | Correct is lekompo123';
-    alert('Wrong password! Type: lekompo123');
+    document.getElementById('msg').innerText='❌ Wrong password';
   }
 }
-if(localStorage.getItem('lekompo_admin_ok')==='yes'){
-  document.getElementById('login').style.display='none';
-  loadMixes();
-  setInterval(loadMixes,5000);
-}
-async function loadMixes(){
+
+async function loadVotes(){
   try{
     const r = await fetch('mixes.json?v='+Date.now());
     const mixes = await r.json();
-    let total=0, html='';
-    for(let m of mixes.reverse()){
+    let total=0;
+    let results=[];
+    for(let m of mixes){
       let count=0;
       try{
-        const cr = await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${m.id}`);
-        const cd = await cr.json();
-        count = cd.value||0;
-      }catch(e){ count = Math.floor(Math.random()*5); }
+        const res = await fetch('https://api.countapi.xyz/get/lekompo-2026-v1/'+m.id);
+        const data = await res.json();
+        count = data.value || 0;
+      }catch(e){ count = 0; }
       total+=count;
-      html+=`<div class="card"><img src="${m.cover}"><div style="flex:1"><b>${m.title}</b><br><span style="color:#ff8fab">❤️ ${count} votes LIVE</span></div></div>`;
+      results.push({title:m.title, cover:m.cover, count:count});
     }
-    document.getElementById('totalBox').innerText = 'TOTAL VOTES: '+total+' 🔥';
-    document.getElementById('mixList').innerHTML = html || 'No mixes yet';
+    results.sort((a,b)=>b.count-a.count);
+    document.getElementById('total').innerHTML = `TOTAL: ${total} VOTES 🔥<br><span style="font-size:14px">LEADER: ${results[0]?.title||'No votes yet'} (${results[0]?.count||0})</span>`;
+    let html='';
+    results.forEach((m,i)=>{
+      html+=`<div class="card" style="border-left-color:${i==0&&m.count>0?'#00ff88':'#ff1a5e'}"><img src="${m.cover}"><div style="flex:1"><b>${i==0&&m.count>0?'👑 ':''}${m.title}</b><br><span style="color:#ff8fab;font-size:18px;font-weight:bold">❤️ ${m.count} VOTES</span><br><span style="color:#888;font-size:11px">Rank #${i+1}</span></div></div>`;
+    });
+    document.getElementById('list').innerHTML = html || 'No mixes uploaded yet';
   }catch(e){
-    document.getElementById('mixList').innerText='Error loading mixes.json';
+    document.getElementById('list').innerHTML='No mixes.json found - upload mixes first';
   }
 }
 </script>
