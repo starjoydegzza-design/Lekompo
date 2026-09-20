@@ -33,4 +33,34 @@ async function load(){
     document.getElementById('status').innerText = `${mixes.length} mixes • 1 vote per person`;
     for(let m of [...mixes].reverse()){
       let count = 0;
-      try{
+      try{        try{
+        const cr = await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${m.id}`);
+        const cd = await cr.json();
+        count = cd.value || 0;
+      }catch(e){ count = 0; }
+      const hasVoted = localStorage.getItem('lekompo_hasVoted');
+      const btnText = hasVoted ? (hasVoted===m.id ? "✅ Your Vote" : "Already Voted") : "Vote ❤️";
+      const disabled = hasVoted ? "disabled" : "";
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<img src="${m.cover}"><h3>${m.title}</h3><div class="votes">❤️ ${count} votes</div><button ${disabled} onclick="vote('${m.id}')">${btnText}</button>`;
+      list.appendChild(card);
+    }
+  }catch(e){
+    document.getElementById('status').innerText = "No mixes found. Upload in admin.html";
+  }
+}
+async function vote(id){
+  if(localStorage.getItem('lekompo_hasVoted')){
+    alert("❌ You already voted! Only 1 vote per phone.");
+    return;
+  }
+  localStorage.setItem('lekompo_hasVoted', id);
+  try{ await fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${id}`); }catch(e){}
+  alert("✅ Your vote is counted!");
+  load();
+}
+load();
+</script>
+</body>
+</html>
