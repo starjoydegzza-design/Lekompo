@@ -102,7 +102,39 @@ async function vote(id){
   try{ await fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${id}`); }catch(e){}
   alert("✅ Your vote for THIS WEEKEND is counted!");
   load();
-}
+}// LIVE VOTE SENDER - sends to Admin every second
+async function vote(id, btn){
+  if(localStorage.getItem('voted_'+id)){
+    alert('You already voted for this mix! ❤️');
+    return;
+  }
+  
+  btn.innerText = 'Voting...';
+  btn.disabled = true;
+  
+  try{
+    // SEND TO ADMIN LIVE COUNTER
+    const res = await fetch(`https://api.countapi.xyz/hit/lekompo-2026-v1/${id}`);
+    const data = await res.json();
+    
+    localStorage.setItem('voted_'+id, '1');
+    btn.innerText = `❤️ ${data.value} VOTES`;
+    btn.style.background = '#00ff88';
+    btn.style.color = '#000';
+    
+    // Update display instantly
+    if(document.getElementById('count-'+id)){
+      document.getElementById('count-'+id).innerText = `❤️ ${data.value} votes LIVE`;
+    }
+    
+    console.log('VOTE SENT TO ADMIN:', id, data.value);
+    
+  }catch(e){
+    // Fallback if API down - still count locally
+    let localVotes = parseInt(localStorage.getItem('local_'+id) || '0') + 1;
+    localStorage.setItem('local_'+id, localVotes);
+    localStorage.setItem('voted_'+id, '1');
+    btn.inner
 load();
 </script>
 </body>
