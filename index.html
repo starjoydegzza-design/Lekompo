@@ -22,29 +22,4 @@ h1{text-align:center;color:#ff0055}
 const API="https://countapi.mileshilliard.com/api/v1";
 const NS="lekompo-starjoydegzza-2026";
 function openCheck(){
- const t=new Date(new Date().toLocaleString("en-US",{timeZone:"Africa/Johannesburg"}));
- return t.getDay()===6||t.getDay()===0;
-}
-async function load(){
- const open=openCheck();
- if(!open) document.getElementById('status').innerHTML='<div class="closed">⛔ Voting Closed — Only Sat 00:00 to Sun 23:59 SA Time</div>';
- const res=await fetch('mixes.json?t='+Date.now());
- const mixes=await res.json();
- const c=document.getElementById('mixes');c.innerHTML='';
- mixes.slice().reverse().forEach(m=>{
-  const id=m.id||m.title.replace(/\s+/g,'-').toLowerCase();
-  const voted=localStorage.getItem('voted-'+id);
-  c.innerHTML+=`<div class="mix"><img src="${m.cover}"><div><div style="font-weight:bold">${m.title}</div><button class="vote" ${voted||!open?'disabled':''} onclick="vote('${id}',this)">${voted?'✅ Voted':open?'👍 Vote':'Closed'}</button></div></div>`;
- });
-}
-async function vote(id,btn){
- if(localStorage.getItem('voted-'+id))return;
- btn.textContent='Voting...';
- await fetch(`${API}/hit/${NS}_${id}`);
- localStorage.setItem('voted-'+id,'1');
- btn.textContent='✅ Voted';btn.disabled=true;
-}
-load();
-</script>
-</body>
-</html>
+ const t=new Date(new Date
