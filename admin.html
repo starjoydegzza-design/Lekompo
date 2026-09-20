@@ -2,64 +2,106 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lekompo Admin</title>
 <style>
 body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:14px}
-input{padding:16px;width:90%;max-width:300px;border-radius:12px;border:none;font-size:18px;text-align:center;margin:15px auto;display:block}
-button{background:#ff1a5e;color:#fff;border:none;padding:16px 50px;border-radius:12px;font-weight:bold;font-size:18px;display:block;margin:10px auto}
+input{padding:14px;width:92%;max-width:360px;border-radius:12px;border:none;font-size:16px;margin:8px auto;display:block;background:#1a1a1a;color:#fff;border:1px solid #333}
+button{background:#ff1a5e;color:#fff;border:none;padding:14px 30px;border-radius:12px;font-weight:bold;display:block;margin:10px auto;cursor:pointer}
 #panel{display:none}
-.card{background:#1a1a1a;padding:12px;border-radius:14px;margin:10px 0;display:flex;gap:12px;align-items:center;border-left:5px solid #ff1a5e}
+.card{background:#1a1a1a;padding:12px;border-radius:14px;margin:10px 0;display:flex;gap:12px;align-items:center;border-left:5px solid #ff1a5e;position:relative}
 .card img{width:70px;height:70px;border-radius:10px;object-fit:cover}
-.totalBox{background:linear-gradient(90deg,#ff1a5e,#ff5e8a);padding:16px;border-radius:12px;text-align:center;font-weight:bold;font-size:20px;margin:12px 0}
+.delBtn{background:#222;color:#ff5555;border:1px solid #ff1a5e;padding:6px 12px;border-radius:8px;font-size:12px;margin:0}
+.addBox{background:#111;padding:16px;border-radius:16px;border:1px solid #222;margin:15px 0}
+.totalBox{background:linear-gradient(90deg,#ff1a5e,#ff5e8a);padding:14px;border-radius:12px;text-align:center;font-weight:bold;margin:12px 0}
 </style>
 </head>
 <body>
-<div id="loginScreen" style="text-align:center;padding-top:50px">
+
+<div id="loginScreen" style="text-align:center;padding-top:60px">
 <h1 style="color:#ff1a5e">🔐 LEKOMPO ADMIN</h1>
 <input id="pass" type="password" placeholder="Password">
 <button onclick="loginNow()">LOGIN</button>
 <p id="msg" style="color:#ff5555"></p>
 </div>
+
 <div id="panel">
 <h2 style="color:#ff1a5e;text-align:center">📊 LIVE VOTE COUNTING ● LIVE</h2>
-<div id="total" class="totalBox">Loading live votes...</div>
-<div id="list"></div>
-<button onclick="location.reload()" style="background:#333;width:100%;margin-top:20px">Logout</button>
+<div id="total" class="totalBox">Loading...</div>
+
+<div class="addBox">
+<h3 style="margin:0 0 10px;color:#ff1a5e;text-align:center">➕ ADD NEW MIX</h3>
+<input id="title" placeholder="Mix Title - e.g. Malešala">
+<input id="cover" placeholder="Paste Image URL (or upload below)">
+<input type="file" id="file" accept="image/*" style="padding:10px">
+<img id="preview" style="width:100%;max-width:200px;border-radius:12px;display:none;margin:10px auto">
+<button onclick="addMix()" style="width:100%;background:#00ff88;color:#000">ADD MIX NOW</button>
+<p style="font-size:11px;color:#888;text-align:center">After adding, scroll down and click DOWNLOAD mixes.json and upload it to GitHub</p>
 </div>
+
+<div id="list"></div>
+
+<button onclick="downloadJSON()" style="background:#222;border:1px solid #ff1a5e;width:100%">⬇️ DOWNLOAD mixes.json (Upload to GitHub)</button>
+<button onclick="location.reload()" style="background:#333;width:100%">Logout</button>
+</div>
+
 <script>
+let mixes = [];
+const STORAGE_KEY = 'lekompo_admin_mixes';
+
+// LOGIN - NO PASSWORD SHOWING
 function loginNow(){
  if(document.getElementById('pass').value.trim()==='lekompo123'){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('panel').style.display='block';
-  loadVotes();
+  init();
   setInterval(loadVotes,3000);
  }else{
   document.getElementById('msg').innerText='❌ Wrong password';
  }
 }
-async function loadVotes(){
- const r=await fetch('mixes.json?v='+Date.now());
- const mixes=await r.json();
- let total=0,results=[];
- for(let m of mixes){
-  let c=0;
-  try{
-   const res=await fetch('https://api.countapi.xyz/get/lekompo-2026-v1/'+m.id);
-   const d=await res.json();
-   c=d.value||0;
-  }catch(e){c=0;}
-  total+=c;
-  results.push({title:m.title,cover:m.cover,count:c});
+
+// PREVIEW
+document.getElementById('file').addEventListener('change', function(e){
+ const file=e.target.files[0];
+ if(!file) return;
+ const reader=new FileReader();
+ reader.onload=function(ev){
+  document.getElementById('preview').src=ev.target.result;
+  document.getElementById('preview').style.display='block';
+  document.getElementById('cover').value=ev.target.result; // base64
+ };
+ reader.readAsDataURL(file);
+});
+document.getElementById('cover').addEventListener('input', function(){
+ if(this.value.startsWith('http')){
+  document.getElementById('preview').src=this.value;
+  document.getElementById('preview').style.display='block';
  }
- results.sort((a,b)=>b.count-a.count);
- document.getElementById('total').innerHTML=`TOTAL: ${total} VOTES 🔥<br><span style="font-size:14px">LEADER: ${results[0]?.title||'None'} (${results[0]?.count||0})</span>`;
- let html='';
- results.forEach((m,i)=>{
-  html+=`<div class="card"><img src="${m.cover}"><div style="flex:1"><b>${i==0&&m.count>0?'👑 ':''}${m.title}</b><br><span style="color:#ff8fab;font-weight:bold">❤️ ${m.count} VOTES</span></div><div>#${i+1}</div></div>`;
- });
- document.getElementById('list').innerHTML=html;
+});
+
+async function init(){
+ try{
+  const r=await fetch('mixes.json?v='+Date.now());
+  const remote=await r.json();
+  mixes=remote;
+ }catch(e){
+  const local=localStorage.getItem(STORAGE_KEY);
+  if(local) mixes=JSON.parse(local);
+ }
+ saveLocal();
+ loadVotes();
 }
-</script>
-</body>
-</html>
+
+function saveLocal(){
+ localStorage.setItem(STORAGE_KEY, JSON.stringify(mixes));
+}
+
+function addMix(){
+ const title=document.getElementById('title').value.trim();
+ let cover=document.getElementById('cover').value.trim();
+ if(!title||!cover){alert('Add Title + Artwork!');return;}
+ const id='mix_'+Date.now();
+ mixes.unshift({id, title, cover});
+ document.getElementById('title').value='';
+ document.get
