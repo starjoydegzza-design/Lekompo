@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Best Lekompo Mixtapes | Vote for your favourites</title>
+    <meta
+      name="description"
+      content="Vote for the best Lekompo mixtapes. Watch, listen and pick your favourite mixes."
+    />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7711809224273772"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <aside class="ad-slot" aria-label="Advertisement">
+      <ins
+        class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-7711809224273772"
+        data-ad-slot="0000000000"
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      ></ins>
+    </aside>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/index.html">Best <span>Lekompo</span> Mixtapes</a>
+        <nav class="nav" aria-label="Primary">
+          <a href="/index.html">Home</a>
+          <a href="/about.html">About</a>
+          <a href="/contact.html">Contact</a>
+          <a href="/privacy.html">Privacy</a>
+          <a href="/admin.html">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <h1 class="page-title">Best Lekompo Mixtapes</h1>
+      <p class="page-subtitle">Watch the mixes and vote for your favourite. One vote per person.</p>
+
+      <p class="follow-line">
+        <a class="whatsapp-btn" href="https://whatsapp.com/channel/0029VbCLeAC2Jl89xRXsw340" target="_blank" rel="noopener">Follow on WhatsApp</a>
+      </p>
+
+      <div id="vote-status" class="vote-status" role="status"></div>
+
+      <div id="grid" class="video-grid"></div>
+    </main>
+
+    <aside class="ad-slot" aria-label="Advertisement">
+      <ins
+        class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-7711809224273772"
+        data-ad-slot="1111111111"
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      ></ins>
+    </aside>
+
+    <footer class="site-footer">
+      <div>&copy; <span id="year"></span> Best Lekompo Mixtapes</div>
+      <div>
+        <a href="/about.html">About</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="https://whatsapp.com/channel/0029VbCLeAC2Jl89xRXsw340" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+    </footer>
+
+    <script src="/store.js"></script>
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+
+      var grid = document.getElementById("grid");
+      var voteStatus = document.getElementById("vote-status");
+
+      function renderStatus() {
+        var open = BLM.isVotingOpen();
+        var votedAlready = BLM.hasVotedAny();
+        if (!open) {
+          voteStatus.className = "vote-status closed";
+          voteStatus.textContent =
+            "Voting is closed. It opens every weekend \u2013 Saturday 00:00 until Sunday 23:59.";
+        } else if (votedAlready) {
+          voteStatus.className = "vote-status voted";
+          voteStatus.textContent = "Thanks \u2013 your vote has been counted. You can vote again next weekend.";
+        } else {
+          voteStatus.className = "vote-status open";
+          voteStatus.textContent = "Voting is open this weekend. You get one vote \u2013 choose wisely!";
+        }
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function mediaHtml(video) {
+        var embed = BLM.toEmbedUrl(video.videoUrl);
+        if (embed) {
+          return (
+            '<iframe src="' +
+            encodeURI(embed) +
+            '" title="' +
+            escapeHtml(video.title) +
+            '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>'
+          );
+        }
+        if (video.artwork) {
+          return '<img src="' + escapeHtml(video.artwork) + '" alt="Artwork for ' + escapeHtml(video.title) + '" loading="lazy" />';
+        }
+        return '<img src="/placeholder-artwork.png" alt="No media available" loading="lazy" />';
+      }
+
+      function render() {
+        renderStatus();
+
+        // Public visitors never see vote counts, so keep the original order.
+        var videos = BLM.getVideos();
+
+        if (!videos.length) {
+          grid.className = "";
+          grid.innerHTML =
+            '<div class="empty">No mixtapes yet. Head to the <a href="/admin.html">Admin page</a> to add the first mix.</div>';
+          return;
+        }
+
+        var open = BLM.isVotingOpen();
+        var votedAlready = BLM.hasVotedAny();
+        var locked = !open || votedAlready;
+
+        grid.className = "video-grid";
+        grid.innerHTML = videos
+          .map(function (v) {
+            var thisOne = BLM.hasVoted(v.id);
+            var label = thisOne ? "Voted \u2713" : !open ? "Voting closed" : votedAlready ? "Vote used" : "Vote";
+            return (
+              '<article class="card">' +
+              '<div class="card-media">' +
+              mediaHtml(v) +
+              "</div>" +
+              '<div class="card-body">' +
+              '<h2 class="card-title">' +
+              escapeHtml(v.title) +
+              "</h2>" +
+              '<div class="vote-row">' +
+              '<button class="btn btn-block" data-id="' +
+              v.id +
+              '"' +
+              (locked ? " disabled" : "") +
+              ">" +
+              label +
+              "</button>" +
+              "</div>" +
+              "</div>" +
+              "</article>"
+            );
+          })
+          .join("");
+      }
+
+      grid.addEventListener("click", function (e) {
+        var btn = e.target.closest("button[data-id]");
+        if (!btn) return;
+        var res = BLM.vote(btn.getAttribute("data-id"));
+        if (res.ok) {
+          render();
+        } else if (res.reason === "closed") {
+          renderStatus();
+        }
+      });
+
+      render();
+
+      // Keep in sync if admin adds/removes in another tab
+      window.addEventListener("storage", render);
+    </script>
+    <script>
+      // Initialize each AdSense slot
+      (function () {
+        var slots = document.querySelectorAll(".adsbygoogle");
+        for (var i = 0; i < slots.length; i++) {
+          try {
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+          } catch (e) {}
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin | Best Lekompo Mixtapes</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/index.html">Best <span>Lekompo</span> Mixtapes</a>
+        <nav class="nav" aria-label="Primary">
+          <a href="/index.html">Home</a>
+          <a href="/about.html">About</a>
+          <a href="/contact.html">Contact</a>
+          <a href="/privacy.html">Privacy</a>
+          <a href="/admin.html">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <!-- Password gate -->
+      <section id="gate" class="gate" hidden>
+        <div class="form-card">
+          <h1 class="page-title">Admin Login</h1>
+          <p class="page-subtitle">Enter the admin password to manage mixtapes.</p>
+          <form id="login-form">
+            <div class="field">
+              <label for="pw">Password</label>
+              <input type="password" id="pw" autocomplete="current-password" required />
+            </div>
+            <button class="btn btn-block" type="submit">Log in</button>
+            <div class="error-msg" id="login-error" role="alert"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Admin dashboard -->
+      <section id="dashboard" hidden>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+          <h1 class="page-title">Admin Dashboard</h1>
+          <button class="btn btn-danger" id="logout-btn" type="button">Log out</button>
+        </div>
+        <p class="page-subtitle">Add new mixtapes, view votes and delete mixes.</p>
+
+        <div class="form-card">
+          <h2>Add a mixtape</h2>
+          <form id="add-form">
+            <div class="field">
+              <label for="title">Mix title *</label>
+              <input type="text" id="title" required placeholder="e.g. Lekompo Vol. 5 - Summer Heat" />
+            </div>
+            <div class="field">
+              <label for="videoUrl">Video link (YouTube / Vimeo)</label>
+              <input type="url" id="videoUrl" placeholder="https://youtu.be/..." />
+              <div class="hint">Optional. If provided, the video is embedded on the homepage.</div>
+            </div>
+            <div class="field">
+              <label for="artworkFile">Artwork / picture of the mix</label>
+              <input type="file" id="artworkFile" accept="image/*" />
+              <div class="hint">Optional. Shown when there is no video link. Stored on this device.</div>
+            </div>
+            <button class="btn btn-block" type="submit">Add mixtape</button>
+            <div class="error-msg" id="add-error" role="alert"></div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h2>Mixtapes &amp; votes</h2>
+          <div id="admin-list"></div>
+        </div>
+
+        <div class="notice">
+          Note: mixtapes, artwork and votes are saved in this browser&apos;s localStorage. The admin password
+          check runs in the browser, so this is meant for casual gatekeeping rather than strong security.
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>&copy; <span id="year"></span> Best Lekompo Mixtapes</div>
+      <div>
+        <a href="/about.html">About</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="https://whatsapp.com/channel/0029VbCLeAC2Jl89xRXsw340" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+    </footer>
+
+    <script src="/store.js"></script>
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+
+      var gate = document.getElementById("gate");
+      var dashboard = document.getElementById("dashboard");
+      var loginForm = document.getElementById("login-form");
+      var loginError = document.getElementById("login-error");
+      var addForm = document.getElementById("add-form");
+      var addError = document.getElementById("add-error");
+      var adminList = document.getElementById("admin-list");
+      var artworkData = "";
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function showApp() {
+        if (BLM.isLoggedIn()) {
+          gate.hidden = true;
+          dashboard.hidden = false;
+          renderList();
+        } else {
+          gate.hidden = false;
+          dashboard.hidden = true;
+          document.getElementById("pw").focus();
+        }
+      }
+
+      loginForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var pw = document.getElementById("pw").value;
+        if (BLM.login(pw)) {
+          loginError.textContent = "";
+          document.getElementById("pw").value = "";
+          showApp();
+        } else {
+          loginError.textContent = "Incorrect password. Please try again.";
+        }
+      });
+
+      document.getElementById("logout-btn").addEventListener("click", function () {
+        BLM.logout();
+        showApp();
+      });
+
+      // Read artwork file into a data URL so it survives in localStorage
+      document.getElementById("artworkFile").addEventListener("change", function (e) {
+        var file = e.target.files && e.target.files[0];
+        artworkData = "";
+        if (!file) return;
+        if (file.size > 1.5 * 1024 * 1024) {
+          addError.textContent = "Artwork is larger than 1.5MB and may not save. Try a smaller image.";
+        } else {
+          addError.textContent = "";
+        }
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          artworkData = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      addForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var title = document.getElementById("title").value.trim();
+        var videoUrl = document.getElementById("videoUrl").value.trim();
+        if (!title) {
+          addError.textContent = "Please enter a mix title.";
+          return;
+        }
+        try {
+          BLM.addVideo({ title: title, videoUrl: videoUrl, artwork: artworkData });
+        } catch (err) {
+          addError.textContent = "Could not save. The artwork image may be too large for localStorage.";
+          return;
+        }
+        addForm.reset();
+        artworkData = "";
+        addError.textContent = "";
+        renderList();
+      });
+
+      function renderList() {
+        var videos = BLM.getVideos();
+        if (!videos.length) {
+          adminList.innerHTML = '<div class="empty">No mixtapes yet. Add one above.</div>';
+          return;
+        }
+        adminList.innerHTML = videos
+          .map(function (v) {
+            var embed = BLM.toEmbedUrl(v.videoUrl);
+            var thumb = v.artwork
+              ? '<img class="thumb" src="' + escapeHtml(v.artwork) + '" alt="" />'
+              : '<div class="thumb"></div>';
+            var meta = embed ? "Video embedded" : v.artwork ? "Artwork only" : "No media";
+            return (
+              '<div class="admin-item">' +
+              thumb +
+              '<div class="info">' +
+              '<div class="t">' +
+              escapeHtml(v.title) +
+              "</div>" +
+              '<div class="v">' +
+              (v.votes || 0) +
+              " votes &middot; " +
+              meta +
+              "</div>" +
+              "</div>" +
+              '<button class="btn btn-danger" data-id="' +
+              v.id +
+              '" type="button">Delete</button>' +
+              "</div>"
+            );
+          })
+          .join("");
+      }
+
+      adminList.addEventListener("click", function (e) {
+        var btn = e.target.closest("button[data-id]");
+        if (!btn) return;
+        if (confirm("Delete this mixtape? This cannot be undone.")) {
+          BLM.deleteVideo(btn.getAttribute("data-id"));
+          renderList();
+        }
+      });
+
+      showApp();
+    </script>
+  </body>
+</html>
