@@ -82,9 +82,10 @@
       var grid = document.getElementById("grid");
       var voteStatus = document.getElementById("vote-status");
 
+      var votedThisWeek = false;
       function renderStatus() {
         var open = BLM.isVotingOpen();
-        var votedAlready = BLM.hasVotedAny();
+        var votedAlready = votedThisWeek;
         if (!open) {
           voteStatus.className = "vote-status closed";
           voteStatus.textContent =
@@ -125,10 +126,10 @@
       }
 
       function render() {
+        BLM.getVideos().then(function (videos) {
         renderStatus();
 
         // Public visitors never see vote counts, so keep the original order.
-        var videos = BLM.getVideos();
 
         if (!videos.length) {
           grid.className = "";
@@ -138,14 +139,13 @@
         }
 
         var open = BLM.isVotingOpen();
-        var votedAlready = BLM.hasVotedAny();
+        var votedAlready = votedThisWeek;
         var locked = !open || votedAlready;
 
         grid.className = "video-grid";
         grid.innerHTML = videos
           .map(function (v) {
-            var thisOne = BLM.hasVoted(v.id);
-            var label = thisOne ? "Voted \u2713" : !open ? "Voting closed" : votedAlready ? "Vote used" : "Vote";
+            var label = votedAlready ? "Vote used" : !open ? "Voting closed" : "Vote";
             return (
               '<article class="card">' +
               '<div class="card-media">' +
@@ -169,17 +169,21 @@
             );
           })
           .join("");
+        });
       }
 
       grid.addEventListener("click", function (e) {
         var btn = e.target.closest("button[data-id]");
         if (!btn) return;
-        var res = BLM.vote(btn.getAttribute("data-id"));
-        if (res.ok) {
-          render();
-        } else if (res.reason === "closed") {
-          renderStatus();
-        }
+        BLM.vote(btn.getAttribute("data-id")).then(function (res) {
+          if (res.ok) {
+            votedThisWeek = true;
+            render();
+          } else {
+            voteStatus.className = "vote-status closed";
+            voteStatus.textContent = res.reason || "Your vote could not be recorded.";
+          }
+        });
       });
 
       render();

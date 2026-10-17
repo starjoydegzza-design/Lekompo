@@ -62,7 +62,7 @@
             <div class="field">
               <label for="artworkFile">Artwork / picture of the mix</label>
               <input type="file" id="artworkFile" accept="image/*" />
-              <div class="hint">Optional. Shown when there is no video link. Stored on this device.</div>
+              <div class="hint">Optional. Shown when there is no video link. Shared with visitors on the homepage.</div>
             </div>
             <button class="btn btn-block" type="submit">Add mixtape</button>
             <div class="error-msg" id="add-error" role="alert"></div>
@@ -75,8 +75,8 @@
         </div>
 
         <div class="notice">
-          Note: mixtapes, artwork and votes are saved in this browser&apos;s localStorage. The admin password
-          check runs in the browser, so this is meant for casual gatekeeping rather than strong security.
+          Mixes, artwork and vote totals are now shared through the site database. Voting is limited to one vote
+          per visitor IP address per week and is open Saturday and Sunday.
         </div>
       </section>
     </main>
@@ -114,7 +114,7 @@
       }
 
       function showApp() {
-        if (BLM.isLoggedIn()) {
+        if (sessionStorage.getItem("blm_admin") === "1") {
           gate.hidden = true;
           dashboard.hidden = false;
           renderList();
@@ -131,6 +131,7 @@
         if (BLM.login(pw)) {
           loginError.textContent = "";
           document.getElementById("pw").value = "";
+          sessionStorage.setItem("blm_admin", "1");
           showApp();
         } else {
           loginError.textContent = "Incorrect password. Please try again.";
@@ -138,8 +139,8 @@
       });
 
       document.getElementById("logout-btn").addEventListener("click", function () {
-        BLM.logout();
-        showApp();
+          sessionStorage.removeItem("blm_admin");
+          showApp();
       });
 
       // Read artwork file into a data URL so it survives in localStorage
@@ -147,7 +148,7 @@
         var file = e.target.files && e.target.files[0];
         artworkData = "";
         if (!file) return;
-        if (file.size > 1.5 * 1024 * 1024) {
+        if (file.size > 650 * 1024) {
           addError.textContent = "Artwork is larger than 1.5MB and may not save. Try a smaller image.";
         } else {
           addError.textContent = "";
@@ -167,20 +168,18 @@
           addError.textContent = "Please enter a mix title.";
           return;
         }
-        try {
-          BLM.addVideo({ title: title, videoUrl: videoUrl, artwork: artworkData });
-        } catch (err) {
-          addError.textContent = "Could not save. The artwork image may be too large for localStorage.";
-          return;
-        }
-        addForm.reset();
-        artworkData = "";
-        addError.textContent = "";
-        renderList();
+        BLM.addVideo({ title: title, videoUrl: videoUrl, artwork: artworkData }).then(function () {
+          addForm.reset();
+          artworkData = "";
+          addError.textContent = "";
+          renderList();
+        }).catch(function (err) {
+          addError.textContent = err.reason || "Could not save this mix. Try a smaller artwork image.";
+        });
       });
 
       function renderList() {
-        var videos = BLM.getVideos();
+        BLM.getAdminVideos().then(function (videos) {
         if (!videos.length) {
           adminList.innerHTML = '<div class="empty">No mixtapes yet. Add one above.</div>';
           return;
@@ -212,14 +211,14 @@
             );
           })
           .join("");
+        });
       }
 
       adminList.addEventListener("click", function (e) {
         var btn = e.target.closest("button[data-id]");
         if (!btn) return;
         if (confirm("Delete this mixtape? This cannot be undone.")) {
-          BLM.deleteVideo(btn.getAttribute("data-id"));
-          renderList();
+          BLM.deleteVideo(btn.getAttribute("data-id")).then(renderList);
         }
       });
 
