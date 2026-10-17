@@ -174,18 +174,20 @@
       grid.addEventListener("click", function (e) {
         var btn = e.target.closest("button[data-id]");
         if (!btn) return;
-        var res = BLM.vote(btn.getAttribute("data-id"));
-        if (res.ok) {
-          render();
-        } else if (res.reason === "closed") {
-          renderStatus();
-        }
+        btn.disabled = true;
+        BLM.vote(btn.getAttribute("data-id")).then(function (res) {
+          if (res.ok) render();
+          else if (res.reason === "closed") renderStatus();
+          else if (res.reason === "already") renderStatus();
+          else btn.disabled = false;
+        });
       });
 
       render();
 
       // Keep in sync if admin adds/removes in another tab
       window.addEventListener("storage", render);
+      window.addEventListener("blm:updated", render);
     </script>
     <script>
       // Initialize each AdSense slot

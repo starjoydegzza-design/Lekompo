@@ -75,8 +75,7 @@
         </div>
 
         <div class="notice">
-          Note: mixtapes, artwork and votes are saved in this browser&apos;s localStorage. The admin password
-          check runs in the browser, so this is meant for casual gatekeeping rather than strong security.
+          Mixtapes, artwork and votes are now shared across visitors through the connected database. The admin dashboard shows the current week&apos;s vote totals.
         </div>
       </section>
     </main>
@@ -131,7 +130,11 @@
         if (BLM.login(pw)) {
           loginError.textContent = "";
           document.getElementById("pw").value = "";
-          showApp();
+      window.addEventListener("blm:updated", function () {
+        if (BLM.isLoggedIn()) renderList();
+      });
+
+      showApp();
         } else {
           loginError.textContent = "Incorrect password. Please try again.";
         }
@@ -168,7 +171,15 @@
           return;
         }
         try {
-          BLM.addVideo({ title: title, videoUrl: videoUrl, artwork: artworkData });
+          BLM.addVideo({ title: title, videoUrl: videoUrl, artwork: artworkData }).then(function () {
+            addForm.reset();
+            artworkData = "";
+            addError.textContent = "";
+            renderList();
+          }).catch(function () {
+            addError.textContent = "Could not save the mixtape.";
+          });
+          return;
         } catch (err) {
           addError.textContent = "Could not save. The artwork image may be too large for localStorage.";
           return;
@@ -218,8 +229,9 @@
         var btn = e.target.closest("button[data-id]");
         if (!btn) return;
         if (confirm("Delete this mixtape? This cannot be undone.")) {
-          BLM.deleteVideo(btn.getAttribute("data-id"));
-          renderList();
+          BLM.deleteVideo(btn.getAttribute("data-id")).then(renderList).catch(function () {
+            addError.textContent = "Could not delete the mixtape.";
+          });
         }
       });
 
