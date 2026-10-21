@@ -1,0 +1,29 @@
+/* Shared Supabase data layer for Best Lekompo Mixtapes */
+(function (global) {
+  "use strict";
+  var ADMIN_PASSWORD = "StarJoy Degzza for Vercel.!1";
+  var cache = [];
+  var votedKey = "blm_voter_key";
+  var voterKey = localStorage.getItem(votedKey) || (crypto.randomUUID ? crypto.randomUUID() : "v_" + Date.now() + Math.random());
+  localStorage.setItem(votedKey, voterKey);
+  var adminKey = "blm_admin";
+  function isVotingOpen() { var day = new Date().getDay(); return day === 6 || day === 0; }
+  function toEmbedUrl(url) { if (!url) return ""; var yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/); if (yt) return "https://www.youtube.com/embed/" + yt[1]; var vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/); if (vm) return "https://player.vimeo.com/video/" + vm[1]; return /\/embed\/|player\./.test(url) ? url : ""; }
+  function getVideos() { return cache; }
+  async function refresh() { var r = await fetch("/api/mixtapes", { cache: "no-store" }); if (!r.ok) throw new Error("load failed"); var data = await r.json(); cache = (data.mixtapes || []).map(function (v) { return { id:v.id, title:v.title, videoUrl:v.video_url, artwork:v.artwork, votes:v.votes || 0, createdAt:v.created_at }; }); global.dispatchEvent(new Event("blm:updated")); return cache; }
+  async function addVideo(data) { var r = await fetch("/api/mixtapes", { method:"POST", headers:{"Content-Type":"application/json","x-admin-password":ADMIN_PASSWORD}, body:JSON.stringify({title:data.title,video_url:data.videoUrl || "",artwork:data.artwork || ""}) }); if (!r.ok) throw new Error("save failed"); await refresh(); }
+  async function deleteVideo(id) { var r = await fetch("/api/mixtapes?id=" + encodeURIComponent(id), { method:"DELETE", headers:{"x-admin-password":ADMIN_PASSWORD} }); if (!r.ok) throw new Error("delete failed"); await refresh(); }
+  async function vote(id) { if (!isVotingOpen()) return {ok:false,reason:"closed"}; var r = await fetch("/api/votes", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mixtape_id:id,voter_key:voterKey})}); if (r.status === 409) return {ok:false,reason:"already"}; if (!r.ok) return {ok:false,reason:"error"}; localStorage.setItem("blm_voted_week", new Date().toISOString().slice(0,10)); return {ok:true}; }
+  function hasVotedAny() {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return localStorage.getItem("blm_voted_week") === d.toISOString().slice(0, 10);
+  }
+  function hasVoted() { return hasVotedAny(); }
+  function login(pw) { if (pw === ADMIN_PASSWORD) { sessionStorage.setItem(adminKey,"1"); return true; } return false; }
+  function isLoggedIn() { return sessionStorage.getItem(adminKey) === "1"; }
+  function logout() { sessionStorage.removeItem(adminKey); }
+  global.BLM = {getVideos,refresh,addVideo,deleteVideo,vote,hasVoted,hasVotedAny,isVotingOpen,toEmbedUrl,login,isLoggedIn,logout};
+  refresh().catch(function () { global.dispatchEvent(new Event("blm:updated")); });
+})(window);
