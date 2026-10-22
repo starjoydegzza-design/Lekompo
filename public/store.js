@@ -13,7 +13,7 @@
   async function refresh() { var r = await fetch("/api/mixtapes", { cache: "no-store" }); if (!r.ok) throw new Error("load failed"); var data = await r.json(); cache = (data.mixtapes || []).map(function (v) { return { id:v.id, title:v.title, videoUrl:v.video_url, artwork:v.artwork, votes:v.votes || 0, createdAt:v.created_at }; }); global.dispatchEvent(new Event("blm:updated")); return cache; }
   async function addVideo(data) { var r = await fetch("/api/mixtapes", { method:"POST", headers:{"Content-Type":"application/json","x-admin-password":ADMIN_PASSWORD}, body:JSON.stringify({title:data.title,video_url:data.videoUrl || "",artwork:data.artwork || ""}) }); if (!r.ok) throw new Error("save failed"); await refresh(); }
   async function deleteVideo(id) { var r = await fetch("/api/mixtapes?id=" + encodeURIComponent(id), { method:"DELETE", headers:{"x-admin-password":ADMIN_PASSWORD} }); if (!r.ok) throw new Error("delete failed"); await refresh(); }
-  async function vote(id) { if (!isVotingOpen()) return {ok:false,reason:"closed"}; var r = await fetch("/api/votes", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mixtape_id:id,voter_key:voterKey})}); if (r.status === 409) return {ok:false,reason:"already"}; if (!r.ok) return {ok:false,reason:"error"}; localStorage.setItem("blm_voted_week", new Date().toISOString().slice(0,10)); return {ok:true}; }
+  async function vote(id) { if (!isVotingOpen()) return {ok:false,reason:"closed"}; var r = await fetch("/api/votes", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mixtape_id:id,voter_key:voterKey})}); if (r.status === 409) return {ok:false,reason:"already"}; if (!r.ok) return {ok:false,reason:"error"}; localStorage.setItem("blm_voted_week", new Date().toISOString().slice(0,10)); await refresh(); return {ok:true}; }
   function hasVotedAny() {
     var d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -26,4 +26,8 @@
   function logout() { sessionStorage.removeItem(adminKey); }
   global.BLM = {getVideos,refresh,addVideo,deleteVideo,vote,hasVoted,hasVotedAny,isVotingOpen,toEmbedUrl,login,isLoggedIn,logout};
   refresh().catch(function () { global.dispatchEvent(new Event("blm:updated")); });
+  // Keep every open page synchronized with new mixes and vote totals.
+  setInterval(function () {
+    refresh().catch(function () {});
+  }, 3000);
 })(window);
