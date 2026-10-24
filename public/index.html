@@ -175,6 +175,8 @@
         var btn = e.target.closest("button[data-id]");
         if (!btn) return;
         btn.disabled = true;
+        btn.setAttribute("aria-busy", "true");
+        btn.textContent = "Sending vote...";
         BLM.vote(btn.getAttribute("data-id")).then(function (res) {
           if (res.ok) {
             render();
@@ -183,7 +185,11 @@
           }
           else if (res.reason === "closed") renderStatus();
           else if (res.reason === "already") renderStatus();
-          else btn.disabled = false;
+          else {
+            btn.disabled = false;
+            btn.removeAttribute("aria-busy");
+            btn.textContent = "Try again";
+          }
         });
       });
 
