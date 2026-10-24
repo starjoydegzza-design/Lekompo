@@ -38,20 +38,30 @@
   }
   async function addVideo(data) { var r = await fetch("/api/mixtapes", { method:"POST", headers:{"Content-Type":"application/json","x-admin-password":ADMIN_PASSWORD}, body:JSON.stringify({title:data.title,video_url:data.videoUrl || "",artwork:data.artwork || ""}) }); if (!r.ok) throw new Error("save failed"); await refresh(); }
   async function deleteVideo(id) { var r = await fetch("/api/mixtapes?id=" + encodeURIComponent(id), { method:"DELETE", headers:{"x-admin-password":ADMIN_PASSWORD} }); if (!r.ok) throw new Error("delete failed"); await refresh(); }
-  async function vote(id) {
-    if (!isVotingOpen()) return {ok:false,reason:"closed"};
-    if (hasVotedAny()) return {ok:false,reason:"already"};
-    try {
-      var r = await fetch("/api/votes", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mixtape_id:id,voter_key:voterKey})});
-      if (r.status === 409) return {ok:false,reason:"already"};
-      if (!r.ok) return {ok:false,reason:"error"};
-      localStorage.setItem("blm_voted_week", new Date().toISOString().slice(0,10));
-      global.dispatchEvent(new Event("blm:updated"));
-      refresh().catch(function () {});
-      return {ok:true};
-    } catch (e) {
-      return {ok:false,reason:"error"};
-    }
+  function vote(id) {
+    if (!isVotingOpen()) return Promise.resolve({ok:false,reason:"closed"});
+    if (hasVotedAny()) return Promise.resolve({ok:false,reason:"already"});
+
+    // Lock the weekly vote immediately so the interface never waits on the network.
+    var week = new Date();
+    week.setHours(0, 0, 0, 0);
+    week.setDate(week.getDate() - ((week.getDay() + 6) % 7));
+    var weekKey = week.toISOString().slice(0, 10);
+    localStorage.setItem("blm_voted_week", weekKey);
+    global.dispatchEvent(new Event("blm:updated"));
+
+    return fetch("/api/votes", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mixtape_id:id,voter_key:voterKey}), keepalive:true})
+      .then(function (r) {
+        if (r.status === 409) return {ok:false,reason:"already"};
+        if (!r.ok) return {ok:false,reason:"error"};
+        refresh().catch(function () {});
+        return {ok:true};
+      })
+      .catch(function () {
+        localStorage.removeItem("blm_voted_week");
+        global.dispatchEvent(new Event("blm:updated"));
+        return {ok:false,reason:"error"};
+      });
   }
   function hasVotedAny() {
     var d = new Date();

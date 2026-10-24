@@ -176,20 +176,20 @@
         if (!btn) return;
         btn.disabled = true;
         btn.setAttribute("aria-busy", "true");
-        btn.textContent = "Sending vote...";
+        btn.textContent = "Voted ✓";
+        voteStatus.className = "vote-status voted";
+        voteStatus.textContent = "Thanks for your vote! Your vote has been counted. You can vote again next weekend.";
+        scheduleRender();
         BLM.vote(btn.getAttribute("data-id")).then(function (res) {
-          if (res.ok) {
-            scheduleRender();
-            voteStatus.className = "vote-status voted";
-            voteStatus.textContent = "Thanks for your vote! Your vote has been counted. You can vote again next weekend.";
+          if (res.ok) return;
+          if (res.reason === "closed" || res.reason === "already") {
+            renderStatus();
+            return;
           }
-          else if (res.reason === "closed") renderStatus();
-          else if (res.reason === "already") renderStatus();
-          else {
-            btn.disabled = false;
-            btn.removeAttribute("aria-busy");
-            btn.textContent = "Try again";
-          }
+          btn.disabled = false;
+          btn.removeAttribute("aria-busy");
+          btn.textContent = "Try again";
+          renderStatus();
         });
       });
 
