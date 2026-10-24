@@ -176,7 +176,11 @@
         if (!btn) return;
         btn.disabled = true;
         BLM.vote(btn.getAttribute("data-id")).then(function (res) {
-          if (res.ok) render();
+          if (res.ok) {
+            render();
+            voteStatus.className = "vote-status voted";
+            voteStatus.textContent = "Thanks for your vote! Your vote has been counted. You can vote again next weekend.";
+          }
           else if (res.reason === "closed") renderStatus();
           else if (res.reason === "already") renderStatus();
           else btn.disabled = false;
