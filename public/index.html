@@ -145,7 +145,7 @@
         grid.innerHTML = videos
           .map(function (v) {
             var thisOne = BLM.hasVoted(v.id);
-            var label = thisOne ? "Voted \u2713" : !open ? "Voting closed" : votedAlready ? "Vote used" : "Vote";
+            var label = thisOne ? "Voted \u2713" : !open ? "Voting closed" : votedAlready ? "No votes available" : "Vote";
             return (
               '<article class="card">' +
               '<div class="card-media">' +
