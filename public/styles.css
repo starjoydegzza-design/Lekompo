@@ -356,6 +356,37 @@ h2 {
   color: var(--yellow);
 }
 
+/* Instant loading placeholders */
+.loading-card {
+  border-color: var(--border);
+}
+
+.loading-shimmer {
+  background: linear-gradient(100deg, #111 25%, #252525 45%, #111 65%);
+  background-size: 240% 100%;
+  animation: loading-shimmer 1.4s ease-in-out infinite;
+}
+
+.loading-line {
+  border-radius: 6px;
+  background: var(--surface-2);
+  animation: loading-shimmer 1.4s ease-in-out infinite;
+  background-image: linear-gradient(100deg, transparent 25%, rgba(255,255,255,.06) 45%, transparent 65%);
+  background-size: 240% 100%;
+}
+
+.loading-line-title { height: 1.25rem; width: 72%; }
+.loading-line-button { height: 2.45rem; width: 100%; margin-top: auto; }
+
+@keyframes loading-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-shimmer, .loading-line { animation: none; }
+}
+
 /* Misc */
 .empty {
   text-align: center;

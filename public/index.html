@@ -119,9 +119,9 @@
           );
         }
         if (video.artwork) {
-          return '<img src="' + escapeHtml(video.artwork) + '" alt="Artwork for ' + escapeHtml(video.title) + '" loading="lazy" />';
+          return '<img src="' + escapeHtml(video.artwork) + '" alt="Artwork for ' + escapeHtml(video.title) + '" loading="eager" />';
         }
-        return '<img src="/placeholder-artwork.png" alt="No media available" loading="lazy" />';
+        return '<img src="/placeholder-artwork.png" alt="No media available" loading="eager" />';
       }
 
       function render() {
@@ -131,9 +131,9 @@
         var videos = BLM.getVideos();
 
         if (!videos.length) {
-          grid.className = "";
+          grid.className = "video-grid loading-grid";
           grid.innerHTML =
-            '<div class="empty">No mixtapes yet. Head to the <a href="/admin.html">Admin page</a> to add the first mix.</div>';
+            '<article class="card loading-card" aria-hidden="true"><div class="card-media loading-shimmer"></div><div class="card-body"><div class="loading-line loading-line-title"></div><div class="loading-line loading-line-button"></div></div></article>'.repeat(3);
           return;
         }
 
@@ -175,23 +175,39 @@
         var btn = e.target.closest("button[data-id]");
         if (!btn) return;
         btn.disabled = true;
+        btn.setAttribute("aria-busy", "true");
+        btn.textContent = "Sending vote...";
         BLM.vote(btn.getAttribute("data-id")).then(function (res) {
           if (res.ok) {
-            render();
+            scheduleRender();
             voteStatus.className = "vote-status voted";
             voteStatus.textContent = "Thanks for your vote! Your vote has been counted. You can vote again next weekend.";
           }
           else if (res.reason === "closed") renderStatus();
           else if (res.reason === "already") renderStatus();
-          else btn.disabled = false;
+          else {
+            btn.disabled = false;
+            btn.removeAttribute("aria-busy");
+            btn.textContent = "Try again";
+          }
         });
       });
 
-      render();
+      var renderQueued = false;
+      function scheduleRender() {
+        if (renderQueued) return;
+        renderQueued = true;
+        requestAnimationFrame(function () {
+          renderQueued = false;
+          render();
+        });
+      }
 
-      // Keep in sync if admin adds/removes in another tab
-      window.addEventListener("storage", render);
-      window.addEventListener("blm:updated", render);
+      scheduleRender();
+
+      // Batch refresh-driven updates into one paint to avoid flicker and freezes.
+      window.addEventListener("storage", scheduleRender);
+      window.addEventListener("blm:updated", scheduleRender);
     </script>
     <script>
       // Initialize each AdSense slot
