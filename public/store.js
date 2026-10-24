@@ -48,6 +48,7 @@
     week.setDate(week.getDate() - ((week.getDay() + 6) % 7));
     var weekKey = week.toISOString().slice(0, 10);
     localStorage.setItem("blm_voted_week", weekKey);
+    localStorage.setItem("blm_voted_mix", id);
     global.dispatchEvent(new Event("blm:updated"));
 
     return fetch("/api/votes", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mixtape_id:id,voter_key:voterKey}), keepalive:true})
@@ -59,6 +60,7 @@
       })
       .catch(function () {
         localStorage.removeItem("blm_voted_week");
+        localStorage.removeItem("blm_voted_mix");
         global.dispatchEvent(new Event("blm:updated"));
         return {ok:false,reason:"error"};
       });
@@ -69,7 +71,9 @@
     d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
     return localStorage.getItem("blm_voted_week") === d.toISOString().slice(0, 10);
   }
-  function hasVoted() { return hasVotedAny(); }
+  function hasVoted(id) {
+    return hasVotedAny() && (!id || localStorage.getItem("blm_voted_mix") === String(id));
+  }
   function login(pw) { if (pw === ADMIN_PASSWORD) { sessionStorage.setItem(adminKey,"1"); return true; } return false; }
   function isLoggedIn() { return sessionStorage.getItem(adminKey) === "1"; }
   function logout() { sessionStorage.removeItem(adminKey); }
