@@ -2,7 +2,12 @@
 (function (global) {
   "use strict";
   var ADMIN_PASSWORD = "StarJoy Degzza for Vercel.!1";
+  var videosCacheKey = "blm_mixtapes_cache";
   var cache = [];
+  try {
+    var savedCache = JSON.parse(sessionStorage.getItem(videosCacheKey) || "[]");
+    if (Array.isArray(savedCache)) cache = savedCache;
+  } catch (e) {}
   var votedKey = "blm_voter_key";
   var voterKey = localStorage.getItem(votedKey) || (crypto.randomUUID ? crypto.randomUUID() : "v_" + Date.now() + Math.random());
   localStorage.setItem(votedKey, voterKey);
@@ -24,6 +29,7 @@
       if (snapshot !== lastSnapshot) {
         cache = next;
         lastSnapshot = snapshot;
+        try { sessionStorage.setItem(videosCacheKey, JSON.stringify(cache)); } catch (e) {}
         global.dispatchEvent(new Event("blm:updated"));
       }
       return cache;
