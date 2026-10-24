@@ -9,8 +9,17 @@
     if (Array.isArray(savedCache)) cache = savedCache;
   } catch (e) {}
   var votedKey = "blm_voter_key";
-  var voterKey = localStorage.getItem(votedKey) || (crypto.randomUUID ? crypto.randomUUID() : "v_" + Date.now() + Math.random());
-  localStorage.setItem(votedKey, voterKey);
+  function createVoterKey() { return crypto.randomUUID ? crypto.randomUUID() : "v_" + Date.now() + Math.random(); }
+  function getVoterKey() {
+    var stored = localStorage.getItem(votedKey);
+    if (stored) return stored;
+    var cookieMatch = document.cookie.match(/(?:^|; )blm_voter_key=([^;]+)/);
+    var key = cookieMatch ? decodeURIComponent(cookieMatch[1]) : createVoterKey();
+    localStorage.setItem(votedKey, key);
+    document.cookie = "blm_voter_key=" + encodeURIComponent(key) + "; Max-Age=31536000; Path=/; SameSite=Lax";
+    return key;
+  }
+  var voterKey = getVoterKey();
   var adminKey = "blm_admin";
   function isVotingOpen() { var day = new Date().getDay(); return day === 6 || day === 0; }
   function toEmbedUrl(url) { if (!url) return ""; var yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/); if (yt) return "https://www.youtube.com/embed/" + yt[1]; var vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/); if (vm) return "https://player.vimeo.com/video/" + vm[1]; return /\/embed\/|player\./.test(url) ? url : ""; }
