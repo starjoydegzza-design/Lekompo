@@ -179,7 +179,7 @@
         btn.textContent = "Sending vote...";
         BLM.vote(btn.getAttribute("data-id")).then(function (res) {
           if (res.ok) {
-            render();
+            scheduleRender();
             voteStatus.className = "vote-status voted";
             voteStatus.textContent = "Thanks for your vote! Your vote has been counted. You can vote again next weekend.";
           }
@@ -193,11 +193,21 @@
         });
       });
 
-      render();
+      var renderQueued = false;
+      function scheduleRender() {
+        if (renderQueued) return;
+        renderQueued = true;
+        requestAnimationFrame(function () {
+          renderQueued = false;
+          render();
+        });
+      }
 
-      // Keep in sync if admin adds/removes in another tab
-      window.addEventListener("storage", render);
-      window.addEventListener("blm:updated", render);
+      scheduleRender();
+
+      // Batch refresh-driven updates into one paint to avoid flicker and freezes.
+      window.addEventListener("storage", scheduleRender);
+      window.addEventListener("blm:updated", scheduleRender);
     </script>
     <script>
       // Initialize each AdSense slot

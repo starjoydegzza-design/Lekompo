@@ -65,8 +65,20 @@
   function logout() { sessionStorage.removeItem(adminKey); }
   global.BLM = {getVideos,refresh,addVideo,deleteVideo,vote,hasVoted,hasVotedAny,isVotingOpen,toEmbedUrl,login,isLoggedIn,logout};
   refresh().catch(function () { global.dispatchEvent(new Event("blm:updated")); });
-  // Keep every open page synchronized with new mixes and vote totals.
-  setInterval(function () {
-    refresh().catch(function () {});
-  }, 3000);
+  // Poll only while the tab is visible, and refresh immediately when users return.
+  var pollTimer;
+  function startPolling() {
+    clearInterval(pollTimer);
+    pollTimer = setInterval(function () {
+      if (!document.hidden) refresh().catch(function () {});
+    }, 5000);
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) clearInterval(pollTimer);
+    else {
+      refresh().catch(function () {});
+      startPolling();
+    }
+  });
+  startPolling();
 })(window);
