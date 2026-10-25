@@ -5,6 +5,11 @@ function getSupabase() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
+function isVotingOpen() {
+  const day = new Date().getUTCDay()
+  return day === 6 || day === 0
+}
+
 function weekStart() {
   const now = new Date()
   const daysSinceMonday = (now.getUTCDay() + 6) % 7
@@ -14,6 +19,9 @@ function weekStart() {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isVotingOpen()) {
+    return NextResponse.json({ error: 'voting_closed' }, { status: 403 })
+  }
   const body = await request.json().catch(() => null)
   const mixtapeId = typeof body?.mixtape_id === 'string' ? body.mixtape_id : ''
   const voterKey = typeof body?.voter_key === 'string' ? body.voter_key : ''
