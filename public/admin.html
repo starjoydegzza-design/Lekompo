@@ -17,7 +17,9 @@
           <a href="/about.html">About</a>
           <a href="/contact.html">Contact</a>
           <a href="/privacy.html">Privacy</a>
+          <a href="/dj.html">DJ</a>
           <a href="/admin.html">Admin</a>
+          <a href="/admin-plus.html">Admin+</a>
         </nav>
       </div>
     </header>
@@ -62,7 +64,7 @@
             <div class="field">
               <label for="artworkFile">Artwork / picture of the mix</label>
               <input type="file" id="artworkFile" accept="image/*" />
-              <div class="hint">Optional. Shown when there is no video link. Stored on this device.</div>
+              <div class="hint">Optional. Shown when there is no video link. Saved with the shared mixtape.</div>
             </div>
             <button class="btn btn-block" type="submit">Add mixtape</button>
             <div class="error-msg" id="add-error" role="alert"></div>
@@ -124,37 +126,46 @@
         }
       }
 
-      loginForm.addEventListener("submit", function (e) {
+      loginForm.addEventListener("submit", async function (e) {
         e.preventDefault();
-        var pw = document.getElementById("pw").value;
-        if (BLM.login(pw)) {
-          loginError.textContent = "";
-          document.getElementById("pw").value = "";
+        var passwordInput = document.getElementById("pw");
+        var submitButton = loginForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        loginError.textContent = "";
+        try {
+          if (await BLM.login(passwordInput.value)) {
+            passwordInput.value = "";
+            await BLM.refresh().catch(function () {});
+            showApp();
+          } else {
+            loginError.textContent = "Incorrect password. Please try again.";
+          }
+        } catch (error) {
+          loginError.textContent = "Could not sign in. Please try again.";
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
       window.addEventListener("blm:updated", function () {
         if (BLM.isLoggedIn()) renderList();
       });
 
-      showApp();
-        } else {
-          loginError.textContent = "Incorrect password. Please try again.";
-        }
-      });
-
-      document.getElementById("logout-btn").addEventListener("click", function () {
-        BLM.logout();
+      document.getElementById("logout-btn").addEventListener("click", async function () {
+        await BLM.logout();
         showApp();
       });
 
-      // Read artwork file into a data URL so it survives in localStorage
+      // Convert the optional artwork to a data URL for the shared mixtape upload.
       document.getElementById("artworkFile").addEventListener("change", function (e) {
         var file = e.target.files && e.target.files[0];
         artworkData = "";
         if (!file) return;
         if (file.size > 1.5 * 1024 * 1024) {
-          addError.textContent = "Artwork is larger than 1.5MB and may not save. Try a smaller image.";
-        } else {
-          addError.textContent = "";
+          addError.textContent = "Artwork must be 1.5MB or smaller. Choose a smaller image.";
+          return;
         }
+        addError.textContent = "";
         var reader = new FileReader();
         reader.onload = function (ev) {
           artworkData = ev.target.result;
@@ -181,7 +192,7 @@
           });
           return;
         } catch (err) {
-          addError.textContent = "Could not save. The artwork image may be too large for localStorage.";
+          addError.textContent = "Could not save the mixtape or artwork.";
           return;
         }
         addForm.reset();
@@ -235,7 +246,7 @@
         }
       });
 
-      showApp();
+      BLM.checkAdminSession().then(showApp);
     </script>
   </body>
 </html>

@@ -16,8 +16,10 @@
           <a href="/index.html">Home</a>
           <a href="/about.html">About</a>
           <a href="/contact.html">Contact</a>
-          <a href="/privacy.html">Privacy</a>
+          <a href="/privacy.html" aria-current="page">Privacy</a>
+          <a href="/dj.html">DJ</a>
           <a href="/admin.html">Admin</a>
+          <a href="/admin-plus.html">Admin+</a>
         </nav>
       </div>
     </header>
@@ -26,18 +28,22 @@
       <h1 class="page-title">Privacy Policy</h1>
       <div class="prose">
         <p>
-          Best Lekompo Mixtapes keeps things simple. We do not run a backend server and we do not collect
-          personal accounts.
+          Best Lekompo Mixtapes does not require personal accounts. Shared mixtapes, nominee details,
+          artwork and vote records are stored in the connected database and file-storage service so the
+          same information is available to visitors across devices.
         </p>
-        <h2>What we store</h2>
+        <h2>Browser storage and votes</h2>
         <p>
-          The list of mixtapes and your votes are saved locally in your own browser using localStorage.
-          This information stays on your device and is not sent to us.
+          The site uses browser storage for a mixtape cache and to remember weekly mixtape voting state.
+          The DJ of the Year election uses a random, HTTP-only browser cookie to limit voting to one vote
+          per browser. A one-way hash of that cookie is stored with the vote; it is not a name, email
+          address or account profile. The election cookie can remain on the browser for up to one year.
+          Clearing browser storage or cookies may affect these browser-level controls.
         </p>
-        <h2>Votes</h2>
+        <h2>Admin sessions</h2>
         <p>
-          To keep voting fair, we remember which mixes you have voted for on this device. Clearing your
-          browser storage will reset this.
+          Admin pages use a secure, HTTP-only session cookie after password sign-in. The session expires
+          automatically after eight hours and can also be ended by logging out.
         </p>
         <h2>Third-party video</h2>
         <p>

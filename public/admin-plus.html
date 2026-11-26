@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin+ | DJ of the Year</title>
+    <meta name="description" content="Manage Lekompo DJ of the Year nominees and view live election results." />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/index.html">Best <span>Lekompo</span> Mixtapes</a>
+        <nav class="nav" aria-label="Primary">
+          <a href="/index.html">Home</a>
+          <a href="/about.html">About</a>
+          <a href="/contact.html">Contact</a>
+          <a href="/privacy.html">Privacy</a>
+          <a href="/dj.html">DJ</a>
+          <a href="/admin.html">Admin</a>
+          <a href="/admin-plus.html" aria-current="page">Admin+</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section id="gate" class="gate" hidden>
+        <div class="form-card">
+          <p class="election-kicker">DJ of the Year</p>
+          <h1 class="page-title">Admin+</h1>
+          <p class="page-subtitle">Sign in with the existing Admin password to manage nominees and view live results.</p>
+          <form id="login-form">
+            <div class="field">
+              <label for="password">Admin password</label>
+              <input type="password" id="password" autocomplete="current-password" required />
+            </div>
+            <button class="btn btn-block" type="submit">Continue to Admin+</button>
+            <p class="error-msg" id="login-error" role="alert"></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="dashboard" hidden>
+        <div class="dashboard-heading">
+          <div>
+            <p class="election-kicker">Election control room</p>
+            <h1 class="page-title">DJ of the Year · Admin+</h1>
+          </div>
+          <button class="btn btn-danger" id="logout" type="button">Log out</button>
+        </div>
+        <div class="election-notice" id="election-notice" role="status" aria-live="polite">Loading election data…</div>
+
+        <section class="form-card" aria-labelledby="manage-title">
+          <h2 id="manage-title">Manage nominees</h2>
+          <p class="page-subtitle">Add a DJ&apos;s display name and portrait artwork. New nominees appear on the public DJ page automatically.</p>
+          <form id="candidate-form" enctype="multipart/form-data">
+            <div class="field">
+              <label for="dj-name">DJ name</label>
+              <input id="dj-name" name="name" type="text" maxlength="120" placeholder="Enter DJ or stage name" autocomplete="off" required />
+            </div>
+            <div class="field">
+              <label for="dj-artwork">DJ picture or artwork</label>
+              <input id="dj-artwork" name="artwork" type="file" accept="image/jpeg,image/png,image/webp" required />
+              <p class="hint">JPEG, PNG or WebP · maximum 5 MB</p>
+            </div>
+            <button class="btn" id="add-candidate" type="submit">Add nominee</button>
+            <p class="error-msg" id="candidate-message" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="panel" aria-labelledby="results-title">
+          <div class="section-heading">
+            <div>
+              <p class="election-kicker">Updates automatically</p>
+              <h2 id="results-title">Live results</h2>
+            </div>
+            <span class="result-total" id="total-votes">0 votes</span>
+          </div>
+          <div id="winner-panel" class="winner-panel" hidden></div>
+          <div id="results-list" class="results-list" aria-live="polite"><div class="empty">Loading results…</div></div>
+        </section>
+
+        <section class="panel" aria-labelledby="nominees-title">
+          <h2 id="nominees-title">Current nominees</h2>
+          <div id="nominee-list" class="admin-nominee-list"><div class="empty">Loading nominees…</div></div>
+        </section>
+
+        <section class="panel" aria-labelledby="schedule-title">
+          <h2 id="schedule-title">Voting schedule</h2>
+          <div class="election-dates">
+            <div class="election-date"><span>Opens</span><strong>1 December 2026 · 00:00 SAST</strong></div>
+            <div class="election-date"><span>Closes</span><strong>30 December 2026 · 23:59 SAST</strong></div>
+          </div>
+          <p class="hint" style="margin-top:0.75rem">Election times are enforced by the server using South African Standard Time (UTC+02:00).</p>
+        </section>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>&copy; <span id="year"></span> Best Lekompo Mixtapes</div>
+      <div>
+        <a href="/about.html">About</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="https://whatsapp.com/channel/0029VbCLeAC2Jl89xRXsw340" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+    </footer>
+
+    <script src="/store.js"></script>
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+      var gate = document.getElementById("gate");
+      var dashboard = document.getElementById("dashboard");
+      var form = document.getElementById("login-form");
+      var error = document.getElementById("login-error");
+      var candidateForm = document.getElementById("candidate-form");
+      var candidateMessage = document.getElementById("candidate-message");
+      var nomineeList = document.getElementById("nominee-list");
+      var resultsList = document.getElementById("results-list");
+      var totalVotes = document.getElementById("total-votes");
+      var electionNotice = document.getElementById("election-notice");
+      var winnerPanel = document.getElementById("winner-panel");
+      var pollTimer;
+      var loading = false;
+      var saveInProgress = false;
+      var candidates = [];
+
+      function escapeHtml(value) {
+        return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      }
+
+      function showDashboard(authenticated) {
+        gate.hidden = authenticated;
+        dashboard.hidden = !authenticated;
+        if (authenticated) loadData();
+        else document.getElementById("password").focus();
+      }
+
+      function render() {
+        var results = candidates;
+        if (!results.length) {
+          resultsList.innerHTML = '<div class="empty">No nominees or votes yet.</div>';
+          nomineeList.innerHTML = '<div class="empty">No nominees yet. Add the first DJ above.</div>';
+        } else {
+          resultsList.innerHTML = results.map(function (candidate, index) {
+            var count = Number(candidate.vote_count || 0);
+            var percentage = totalCount() ? Math.round(count / totalCount() * 100) : 0;
+            return '<article class="result-row"><span class="result-rank">' + (index + 1) + '</span>' +
+              '<img class="result-avatar" src="' + escapeHtml(candidate.artwork_url) + '" alt="" loading="lazy" />' +
+              '<div class="result-info"><strong>' + escapeHtml(candidate.name) + '</strong><span class="result-meter"><span style="width:' + percentage + '%"></span></span></div>' +
+              '<strong class="result-count">' + count + (count === 1 ? ' vote' : ' votes') + '</strong></article>';
+          }).join("");
+          nomineeList.innerHTML = results.map(function (candidate) {
+            return '<article class="admin-nominee"><img src="' + escapeHtml(candidate.artwork_url) + '" alt="" loading="lazy" />' +
+              '<div class="admin-nominee-info"><strong>' + escapeHtml(candidate.name) + '</strong><span>Added to public nominee list</span></div>' +
+              '<button class="btn btn-danger" type="button" data-delete-id="' + escapeHtml(candidate.candidate_id) + '">Delete</button></article>';
+          }).join("");
+        }
+        var result = window.currentDjResults;
+        totalVotes.textContent = (result ? Number(result.totalVotes || 0) : 0) + ((result && Number(result.totalVotes) === 1) ? ' vote' : ' votes');
+        winnerPanel.hidden = true;
+        if (result && result.state === "closed") {
+          winnerPanel.hidden = false;
+          winnerPanel.textContent = result.winner ? "Winner: " + result.winner.name : result.isTie ? "The election ended in a tie." : "The election closed with no votes.";
+        }
+      }
+
+      function totalCount() {
+        return candidates.reduce(function (total, candidate) { return total + Number(candidate.vote_count || 0); }, 0);
+      }
+
+      async function loadData() {
+        if (loading || document.hidden || dashboard.hidden) return;
+        loading = true;
+        try {
+          var response = await fetch("/api/dj/results", { cache: "no-store", credentials: "same-origin" });
+          var data = await response.json();
+          if (response.status === 401) {
+            await BLM.logout();
+            showDashboard(false);
+            throw new Error("Your Admin session has expired. Please sign in again.");
+          }
+          if (!response.ok) throw new Error(data.error || "Could not load election results.");
+          candidates = data.candidates || [];
+          window.currentDjResults = data;
+          electionNotice.textContent = data.state === "open" ? "Voting is open. Results update automatically while voting continues." : data.state === "closed" ? "Voting is closed. The winner is shown below." : "Voting is scheduled to open on 1 December 2026 at 00:00 SAST.";
+          render();
+        } catch (loadError) {
+          if (loadError.message !== "Your Admin session has expired. Please sign in again.") {
+            electionNotice.textContent = loadError.message || "Election data is temporarily unavailable.";
+          }
+        } finally {
+          loading = false;
+        }
+      }
+
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        var password = document.getElementById("password");
+        var submit = form.querySelector('button[type="submit"]');
+        submit.disabled = true;
+        error.textContent = "";
+        try {
+          if (await BLM.login(password.value)) {
+            password.value = "";
+            showDashboard(true);
+          } else {
+            error.textContent = "Incorrect password. Please try again.";
+          }
+        } catch (loginError) {
+          error.textContent = "Could not sign in. Please try again.";
+        } finally {
+          submit.disabled = false;
+        }
+      });
+
+      document.getElementById("logout").addEventListener("click", async function () {
+        clearInterval(pollTimer);
+        await BLM.logout();
+        showDashboard(false);
+      });
+
+      candidateForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        if (saveInProgress) return;
+        var submit = document.getElementById("add-candidate");
+        saveInProgress = true;
+        submit.disabled = true;
+        candidateMessage.className = "error-msg";
+        candidateMessage.textContent = "Uploading nominee…";
+        try {
+          var response = await fetch("/api/dj/candidates", {
+            method: "POST",
+            credentials: "same-origin",
+            body: new FormData(candidateForm)
+          });
+          var data = await response.json();
+          if (!response.ok) throw new Error(data.error || "Could not add this DJ.");
+          candidateForm.reset();
+          candidateMessage.className = "success-msg";
+          candidateMessage.textContent = "Nominee added. The public page will update shortly.";
+          await loadData();
+        } catch (saveError) {
+          candidateMessage.className = "error-msg";
+          candidateMessage.textContent = saveError.message || "Could not add this DJ.";
+        } finally {
+          saveInProgress = false;
+          submit.disabled = false;
+        }
+      });
+
+      nomineeList.addEventListener("click", async function (event) {
+        var button = event.target.closest("button[data-delete-id]");
+        if (!button || !confirm("Delete this nominee and their votes? This cannot be undone.")) return;
+        button.disabled = true;
+        candidateMessage.className = "error-msg";
+        candidateMessage.textContent = "Deleting nominee…";
+        try {
+          var response = await fetch("/api/dj/candidates?id=" + encodeURIComponent(button.getAttribute("data-delete-id")), {
+            method: "DELETE",
+            credentials: "same-origin"
+          });
+          var data = await response.json();
+          if (!response.ok) throw new Error(data.error || "Could not delete this DJ.");
+          candidateMessage.className = "success-msg";
+          candidateMessage.textContent = "Nominee deleted.";
+          await loadData();
+        } catch (deleteError) {
+          button.disabled = false;
+          candidateMessage.className = "error-msg";
+          candidateMessage.textContent = deleteError.message || "Could not delete this DJ.";
+        }
+      });
+
+      function startPolling() {
+        clearInterval(pollTimer);
+        pollTimer = setInterval(loadData, 3000);
+      }
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) clearInterval(pollTimer);
+        else { loadData(); startPolling(); }
+      });
+
+      BLM.checkAdminSession().then(function (authenticated) {
+        showDashboard(authenticated);
+        if (authenticated) startPolling();
+      });
+    </script>
+  </body>
+</html>

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { isAdminRequest } from '../../../lib/admin-session'
 
 function getSupabase() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
-const ADMIN_PASSWORD = 'StarJoy Degzza for Vercel.!1'
-
 function weekStart() {
   const now = new Date()
   const day = now.getUTCDay()
@@ -16,7 +15,7 @@ function weekStart() {
 }
 
 function authorized(request: NextRequest) {
-  return request.headers.get('x-admin-password') === ADMIN_PASSWORD
+  return isAdminRequest(request)
 }
 
 export async function GET(request: NextRequest) {

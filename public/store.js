@@ -1,7 +1,6 @@
 /* Shared Supabase data layer for Best Lekompo Mixtapes */
 (function (global) {
   "use strict";
-  var ADMIN_PASSWORD = "StarJoy Degzza for Vercel.!1";
   var videosCacheKey = "blm_mixtapes_cache";
   var cache = [];
   try {
@@ -28,8 +27,7 @@
   var lastSnapshot = "";
   async function refresh() {
     if (refreshInFlight) return refreshInFlight;
-    var headers = {}; if (sessionStorage.getItem(adminKey) === "1") headers["x-admin-password"] = ADMIN_PASSWORD;
-    refreshInFlight = fetch("/api/mixtapes", { cache: "no-store", headers: headers }).then(function (r) {
+    refreshInFlight = fetch("/api/mixtapes", { cache: "no-store", credentials: "same-origin" }).then(function (r) {
       if (!r.ok) throw new Error("load failed");
       return r.json();
     }).then(function (data) {
@@ -45,8 +43,8 @@
     }).finally(function () { refreshInFlight = null; });
     return refreshInFlight;
   }
-  async function addVideo(data) { var r = await fetch("/api/mixtapes", { method:"POST", headers:{"Content-Type":"application/json","x-admin-password":ADMIN_PASSWORD}, body:JSON.stringify({title:data.title,video_url:data.videoUrl || "",artwork:data.artwork || ""}) }); if (!r.ok) throw new Error("save failed"); await refresh(); }
-  async function deleteVideo(id) { var r = await fetch("/api/mixtapes?id=" + encodeURIComponent(id), { method:"DELETE", headers:{"x-admin-password":ADMIN_PASSWORD} }); if (!r.ok) throw new Error("delete failed"); await refresh(); }
+  async function addVideo(data) { var r = await fetch("/api/mixtapes", { method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify({title:data.title,video_url:data.videoUrl || "",artwork:data.artwork || ""}) }); if (!r.ok) throw new Error("save failed"); await refresh(); }
+  async function deleteVideo(id) { var r = await fetch("/api/mixtapes?id=" + encodeURIComponent(id), { method:"DELETE", credentials:"same-origin" }); if (!r.ok) throw new Error("delete failed"); await refresh(); }
   function vote(id) {
     if (!isVotingOpen()) return Promise.resolve({ok:false,reason:"closed"});
     if (hasVotedAny()) return Promise.resolve({ok:false,reason:"already"});
@@ -83,10 +81,30 @@
   function hasVoted(id) {
     return hasVotedAny() && (!id || localStorage.getItem("blm_voted_mix") === String(id));
   }
-  function login(pw) { if (pw === ADMIN_PASSWORD) { sessionStorage.setItem(adminKey,"1"); return true; } return false; }
+  async function login(pw) {
+    var response = await fetch("/api/admin/session", { method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify({password:pw}) });
+    if (!response.ok) return false;
+    sessionStorage.setItem(adminKey,"1");
+    return true;
+  }
+  async function checkAdminSession() {
+    try {
+      var response = await fetch("/api/admin/session", { cache:"no-store", credentials:"same-origin" });
+      var data = await response.json();
+      if (data.authenticated) sessionStorage.setItem(adminKey,"1");
+      else sessionStorage.removeItem(adminKey);
+      return !!data.authenticated;
+    } catch (e) {
+      sessionStorage.removeItem(adminKey);
+      return false;
+    }
+  }
   function isLoggedIn() { return sessionStorage.getItem(adminKey) === "1"; }
-  function logout() { sessionStorage.removeItem(adminKey); }
-  global.BLM = {getVideos,refresh,addVideo,deleteVideo,vote,hasVoted,hasVotedAny,isVotingOpen,toEmbedUrl,login,isLoggedIn,logout};
+  async function logout() {
+    sessionStorage.removeItem(adminKey);
+    await fetch("/api/admin/session", { method:"DELETE", credentials:"same-origin" }).catch(function () {});
+  }
+  global.BLM = {getVideos,refresh,addVideo,deleteVideo,vote,hasVoted,hasVotedAny,isVotingOpen,toEmbedUrl,login,checkAdminSession,isLoggedIn,logout};
   refresh().catch(function () { global.dispatchEvent(new Event("blm:updated")); });
   // Poll only while the tab is visible, and refresh immediately when users return.
   var pollTimer;
