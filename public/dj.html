@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DJ of the Year | Best Lekompo Mixtapes</title>
-    <meta name="description" content="Vote for the Lekompo DJ of the Year." />
+    <meta name="description" content="Meet the Lekompo DJ of the Year nominees and cast one vote during the election." />
     <meta name="theme-color" content="#0a0a0a" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
@@ -28,21 +28,26 @@
       <section class="election-hero" aria-labelledby="dj-title">
         <p class="election-kicker">Annual community award</p>
         <h1 class="page-title" id="dj-title">Lekompo DJ of the Year</h1>
-        <p class="page-subtitle">Celebrate the DJs moving Lekompo forward. Nominees and voting will appear here when the election is connected.</p>
-        <span class="election-badge" id="election-status">Scheduled</span>
+        <p class="page-subtitle">Celebrate the DJs moving Lekompo forward. Browse the nominees and support your choice during the voting period.</p>
+        <p class="election-badge" id="election-status" aria-live="polite">Checking election status…</p>
         <div class="election-dates" aria-label="Election schedule">
           <div class="election-date"><span>Voting opens</span><strong>1 December 2026 · 00:00 SAST</strong></div>
           <div class="election-date"><span>Voting closes</span><strong>30 December 2026 · 23:59 SAST</strong></div>
         </div>
       </section>
 
-      <div class="election-notice" role="status">
-        DJ voting is not active yet. The candidate list, one-vote-per-person controls and live results need the shared database connection enabled before votes can be accepted.
-      </div>
+      <div class="election-notice" id="vote-notice" role="status" aria-live="polite">Loading nominees…</div>
 
       <section aria-labelledby="nominees-title">
-        <h2 id="nominees-title">Nominees</h2>
-        <div class="empty">Nominees will be shown here once Admin+ is connected and DJs are added.</div>
+        <div class="section-heading">
+          <div>
+            <p class="election-kicker">The nominees</p>
+            <h2 id="nominees-title">Meet the DJs</h2>
+          </div>
+        </div>
+        <div class="dj-grid" id="candidate-grid" aria-live="polite" aria-busy="true">
+          <div class="empty">Loading nominees…</div>
+        </div>
       </section>
     </main>
 
@@ -55,13 +60,120 @@
         <a href="https://whatsapp.com/channel/0029VbCLeAC2Jl89xRXsw340" target="_blank" rel="noopener">WhatsApp</a>
       </div>
     </footer>
+
     <script>
       document.getElementById("year").textContent = new Date().getFullYear();
-      var now = new Date();
-      var opens = new Date("2026-12-01T00:00:00+02:00");
-      var closes = new Date("2026-12-30T23:59:59+02:00");
-      var status = document.getElementById("election-status");
-      status.textContent = now < opens ? "Scheduled" : now <= closes ? "Voting period" : "Voting closed";
+      var grid = document.getElementById("candidate-grid");
+      var statusBadge = document.getElementById("election-status");
+      var notice = document.getElementById("vote-notice");
+      var state = { candidates: [], election: "scheduled", hasVoted: false, votedCandidateId: null, loading: false, submitting: false, error: "", message: "" };
+      var pollTimer;
+
+      function escapeHtml(value) {
+        return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      }
+
+      function render() {
+        statusBadge.textContent = state.election === "open" ? "Voting is open" : state.election === "closed" ? "Voting closed" : "Voting opens 1 December";
+        statusBadge.className = "election-badge " + (state.election === "open" ? "is-open" : "");
+        if (state.error) {
+          notice.textContent = state.error;
+        } else if (state.message) {
+          notice.textContent = state.message;
+        } else if (state.hasVoted) {
+          notice.textContent = "Your vote has been recorded. One vote per browser is allowed for this election.";
+        } else if (state.election === "open") {
+          notice.textContent = "Voting is open. Choose one DJ; your vote is securely counted once for the election.";
+        } else if (state.election === "closed") {
+          notice.textContent = "Voting has closed. Thank you for supporting the Lekompo community.";
+        } else {
+          notice.textContent = "Voting opens on 1 December 2026 at 00:00 SAST. Nominees are shown below.";
+        }
+
+        if (!state.candidates.length) {
+          grid.innerHTML = '<div class="empty">' + (state.loading ? "Loading nominees…" : "No nominees have been added yet. Please check back soon.") + "</div>";
+          grid.setAttribute("aria-busy", state.loading ? "true" : "false");
+          return;
+        }
+
+        grid.innerHTML = state.candidates.map(function (candidate) {
+          var chosen = state.hasVoted && state.votedCandidateId === candidate.id;
+          var disabled = state.election !== "open" || state.hasVoted || state.submitting;
+          var label = state.submitting ? "Submitting vote…" : chosen ? "Your vote" : state.hasVoted ? "Voting complete" : state.election === "open" ? "Vote for this DJ" : state.election === "closed" ? "Voting closed" : "Voting opens 1 December";
+          return '<article class="dj-card">' +
+            '<div class="dj-artwork"><img src="' + escapeHtml(candidate.artwork_url) + '" alt="Portrait or artwork for ' + escapeHtml(candidate.name) + '" loading="lazy" /></div>' +
+            '<div class="dj-card-body"><h3>' + escapeHtml(candidate.name) + '</h3>' +
+            '<button class="btn dj-vote-button" type="button" data-candidate-id="' + escapeHtml(candidate.id) + '"' + (disabled ? " disabled" : "") + '>' + label + '</button></div></article>';
+        }).join("");
+        grid.setAttribute("aria-busy", state.loading ? "true" : "false");
+      }
+
+      async function loadCandidates() {
+        if (state.loading || document.hidden) return;
+        state.loading = true;
+        render();
+        try {
+          var response = await fetch("/api/dj/candidates", { cache: "no-store", credentials: "same-origin" });
+          var data = await response.json();
+          if (!response.ok) throw new Error(data.error || "The nominee list is unavailable right now.");
+          state.candidates = data.candidates || [];
+          state.election = data.state;
+          state.hasVoted = !!data.hasVoted;
+          state.votedCandidateId = data.votedCandidateId || null;
+          state.error = "";
+        } catch (error) {
+          state.error = error.message || "The nominee list is unavailable right now.";
+        } finally {
+          state.loading = false;
+          render();
+        }
+      }
+
+      grid.addEventListener("click", async function (event) {
+        var button = event.target.closest("button[data-candidate-id]");
+        if (!button || state.submitting || state.hasVoted || state.election !== "open") return;
+        state.submitting = true;
+        state.error = "";
+        state.message = "";
+        render();
+        try {
+          var response = await fetch("/api/dj/votes", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ candidate_id: button.getAttribute("data-candidate-id") })
+          });
+          var data = await response.json();
+          if (response.status === 409 || data.error === "already_voted") {
+            state.message = "A vote has already been recorded for this browser.";
+            await loadCandidates();
+          } else if (!response.ok) {
+            throw new Error(data.error === "voting_closed" ? "Voting is closed." : data.error || "Your vote could not be recorded. Please try again.");
+          } else {
+            state.hasVoted = true;
+            state.votedCandidateId = button.getAttribute("data-candidate-id");
+            state.message = "Thank you. Your vote has been recorded.";
+          }
+        } catch (error) {
+          state.error = error.message || "Your vote could not be recorded. Please try again.";
+        } finally {
+          state.submitting = false;
+          render();
+        }
+      });
+
+      function startPolling() {
+        clearInterval(pollTimer);
+        pollTimer = setInterval(loadCandidates, 5000);
+      }
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) clearInterval(pollTimer);
+        else { loadCandidates(); startPolling(); }
+      });
+
+      render();
+      loadCandidates();
+      startPolling();
     </script>
   </body>
 </html>
