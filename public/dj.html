@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DJ of the Year | Best Lekompo Mixtapes</title>
+    <meta name="description" content="Vote for the Lekompo DJ of the Year." />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/index.html">Best <span>Lekompo</span> Mixtapes</a>
+        <nav class="nav" aria-label="Primary">
+          <a href="/index.html">Home</a>
+          <a href="/about.html">About</a>
+          <a href="/contact.html">Contact</a>
+          <a href="/privacy.html">Privacy</a>
+          <a href="/dj.html" aria-current="page">DJ</a>
+          <a href="/admin.html">Admin</a>
+          <a href="/admin-plus.html">Admin+</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="election-hero" aria-labelledby="dj-title">
+        <p class="election-kicker">Annual community award</p>
+        <h1 class="page-title" id="dj-title">Lekompo DJ of the Year</h1>
+        <p class="page-subtitle">Celebrate the DJs moving Lekompo forward. Nominees and voting will appear here when the election is connected.</p>
+        <span class="election-badge" id="election-status">Scheduled</span>
+        <div class="election-dates" aria-label="Election schedule">
+          <div class="election-date"><span>Voting opens</span><strong>1 December 2026 · 00:00 SAST</strong></div>
+          <div class="election-date"><span>Voting closes</span><strong>30 December 2026 · 23:59 SAST</strong></div>
+        </div>
+      </section>
+
+      <div class="election-notice" role="status">
+        DJ voting is not active yet. The candidate list, one-vote-per-person controls and live results need the shared database connection enabled before votes can be accepted.
+      </div>
+
+      <section aria-labelledby="nominees-title">
+        <h2 id="nominees-title">Nominees</h2>
+        <div class="empty">Nominees will be shown here once Admin+ is connected and DJs are added.</div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>&copy; <span id="year"></span> Best Lekompo Mixtapes</div>
+      <div>
+        <a href="/about.html">About</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="https://whatsapp.com/channel/0029VbCLeAC2Jl89xRXsw340" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+    </footer>
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+      var now = new Date();
+      var opens = new Date("2026-12-01T00:00:00+02:00");
+      var closes = new Date("2026-12-30T23:59:59+02:00");
+      var status = document.getElementById("election-status");
+      status.textContent = now < opens ? "Scheduled" : now <= closes ? "Voting period" : "Voting closed";
+    </script>
+  </body>
+</html>

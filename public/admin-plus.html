@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin+ | DJ of the Year</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/index.html">Best <span>Lekompo</span> Mixtapes</a>
+        <nav class="nav" aria-label="Primary">
+          <a href="/index.html">Home</a>
+          <a href="/about.html">About</a>
+          <a href="/contact.html">Contact</a>
+          <a href="/privacy.html">Privacy</a>
+          <a href="/dj.html">DJ</a>
+          <a href="/admin.html">Admin</a>
+          <a href="/admin-plus.html" aria-current="page">Admin+</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section id="gate" class="gate">
+        <div class="form-card">
+          <p class="election-kicker">DJ of the Year</p>
+          <h1 class="page-title">Admin+</h1>
+          <p class="page-subtitle">Sign in with the existing Admin password to access the DJ election controls.</p>
+          <form id="login-form">
+            <div class="field">
+              <label for="password">Admin password</label>
+              <input type="password" id="password" autocomplete="current-password" required />
+            </div>
+            <button class="btn btn-block" type="submit">Continue to Admin+</button>
+            <p class="error-msg" id="login-error" role="alert"></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="dashboard" hidden>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+          <div>
+            <p class="election-kicker">Election control room</p>
+            <h1 class="page-title">DJ of the Year · Admin+</h1>
+          </div>
+          <button class="btn btn-danger" id="logout" type="button">Log out</button>
+        </div>
+        <div class="election-notice" role="status">
+          Interface preview only: database access was skipped. Changes made here will not be saved, votes cannot be submitted, and live results are unavailable until shared database permissions are enabled.
+        </div>
+
+        <section class="form-card" aria-labelledby="manage-title">
+          <h2 id="manage-title">Manage nominees</h2>
+          <p class="page-subtitle">Add a DJ's display name and portrait artwork for the public voting page.</p>
+          <form>
+            <fieldset class="election-fields" disabled>
+              <div class="field">
+                <label for="dj-name">DJ name</label>
+                <input id="dj-name" type="text" placeholder="Enter DJ or stage name" />
+              </div>
+              <div class="field">
+                <label for="dj-artwork">DJ picture or artwork</label>
+                <input id="dj-artwork" type="file" accept="image/*" />
+              </div>
+              <button class="btn" type="button">Add nominee</button>
+            </fieldset>
+          </form>
+        </section>
+
+        <section class="panel" aria-labelledby="schedule-title">
+          <h2 id="schedule-title">Voting schedule</h2>
+          <div class="election-dates">
+            <div class="election-date"><span>Opens</span><strong>1 December 2026 · 00:00 SAST</strong></div>
+            <div class="election-date"><span>Closes</span><strong>30 December 2026 · 23:59 SAST</strong></div>
+          </div>
+          <p class="hint" style="margin-top:0.75rem">Election times use South African Standard Time (UTC+02:00).</p>
+        </section>
+
+        <section class="panel" aria-labelledby="results-title">
+          <h2 id="results-title">Live results</h2>
+          <div class="empty">Live vote totals and the winner will appear here after the shared database is connected.</div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>&copy; <span id="year"></span> Best Lekompo Mixtapes</div>
+      <div>
+        <a href="/about.html">About</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="https://whatsapp.com/channel/0029VbCLeAC2Jl89xRXsw340" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+    </footer>
+    <script src="/store.js"></script>
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+      var gate = document.getElementById("gate");
+      var dashboard = document.getElementById("dashboard");
+      var form = document.getElementById("login-form");
+      var error = document.getElementById("login-error");
+
+      function showDashboard() {
+        var authenticated = window.BLM && BLM.isLoggedIn();
+        gate.hidden = authenticated;
+        dashboard.hidden = !authenticated;
+      }
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var password = document.getElementById("password").value;
+        if (window.BLM && BLM.login(password)) {
+          error.textContent = "";
+          document.getElementById("password").value = "";
+          showDashboard();
+        } else {
+          error.textContent = "Incorrect password. Please try again.";
+        }
+      });
+
+      document.getElementById("logout").addEventListener("click", function () {
+        BLM.logout();
+        showDashboard();
+      });
+
+      showDashboard();
+    </script>
+  </body>
+</html>
